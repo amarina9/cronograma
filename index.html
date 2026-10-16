@@ -11,7 +11,7 @@
   <h1>Generador de cronogramas</h1>
   <p class="subtitulo">Versión 2 · Datos generales y festivos</p>
 
-  <form id="formulario">
+    <form id="formulario">
     <div class="campo">
       <label for="nombreCurso">Nombre del curso</label>
       <input type="text" id="nombreCurso" placeholder="Ej: Curso de jardinería 2026" required>
@@ -25,6 +25,17 @@
       <div class="campo">
         <label for="fechaFin">Fecha de fin</label>
         <input type="date" id="fechaFin" required>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="campo">
+        <label for="horasDia">Horas al día</label>
+        <input type="number" id="horasDia" min="1" max="12" value="6" required>
+      </div>
+      <div class="campo">
+        <label for="horario">Horario</label>
+        <input type="text" id="horario" placeholder="Ej: 15:00 a 21:00" required>
       </div>
     </div>
 
