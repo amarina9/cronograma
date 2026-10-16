@@ -396,16 +396,9 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
     if (d.fueraDeRango) clases.push('fuera-rango');
     if (d.esFinDeSemana) clases.push('finde');
     if (d.esFestivo) clases.push('festivo');
-    clases.push('estado-' + d.estado.tipo);
-
-    let estiloExtra = '';
-    if (d.estado.tipo === 'modulo' && d.estado.moduloId) {
-      const mod = modulos.find(function (m) { return m.id === d.estado.moduloId; });
-      if (mod) estiloExtra = ` style="background:${mod.color}"`;
-    }
 
     const marcaFestivo = d.esFestivo ? ' *' : '';
-    html += `<th class="${clases.join(' ')}" data-fecha="${d.fechaStr}"${estiloExtra}>`;
+    html += `<th class="${clases.join(' ')}" data-fecha="${d.fechaStr}">`;
     html += `<div class="nombre-dia">${NOMBRES_DIAS_CORTOS[(d.diaSemana + 6) % 7]}</div>`;
     html += `<div class="num-dia">${d.fecha.getDate()}${marcaFestivo}</div>`;
     html += `</th>`;
