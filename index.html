@@ -4,96 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de cronogramas</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      color: #222;
-    }
-    h1 { margin-bottom: 0.5rem; }
-    .subtitulo { color: #666; margin-top: 0; }
-
-    form {
-      background: #f7f7f7;
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin-bottom: 2rem;
-    }
-    .campo {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 1rem;
-    }
-    label {
-      font-weight: 600;
-      margin-bottom: 0.3rem;
-      font-size: 0.9rem;
-    }
-    input[type="text"],
-    input[type="date"] {
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-    .fila {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    button:hover { background: #1d4ed8; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      padding: 0.5rem 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid #e5e5e5;
-    }
-    th {
-      background: #2563eb;
-      color: white;
-      font-weight: 600;
-    }
-    tr:nth-child(even) td { background: #f9f9f9; }
-
-    .fin-de-semana td { color: #999; }
-    .festivo td { color: #c00; }
-
-    .resumen {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: #eff6ff;
-      border-left: 4px solid #2563eb;
-      border-radius: 4px;
-    }
-    .error {
-      color: #c00;
-      margin-top: 0.5rem;
-      font-weight: 600;
-    }
-  </style>
+  <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
 
   <h1>Generador de cronogramas</h1>
-  <p class="subtitulo">Versión 1 · Introducción de datos generales</p>
+  <p class="subtitulo">Versión 2 · Datos generales y festivos</p>
 
   <form id="formulario">
     <div class="campo">
@@ -112,113 +28,21 @@
       </div>
     </div>
 
+    <div class="festivos-bloque">
+      <h3>Días festivos / no lectivos</h3>
+      <div class="festivos-entrada">
+        <input type="date" id="inputFestivo">
+        <button type="button" class="btn-secundario" id="btnAnadirFestivo">Añadir festivo</button>
+      </div>
+      <ul class="lista-festivos" id="listaFestivos"></ul>
+    </div>
+
     <button type="submit">Generar calendario</button>
     <div id="mensajeError" class="error"></div>
   </form>
 
   <div id="resultado"></div>
 
-  <script>
-    const formulario = document.getElementById('formulario');
-    const mensajeError = document.getElementById('mensajeError');
-    const resultado = document.getElementById('resultado');
-
-    const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-    formulario.addEventListener('submit', function (e) {
-      e.preventDefault();
-      mensajeError.textContent = '';
-      resultado.innerHTML = '';
-
-      const nombre = document.getElementById('nombreCurso').value.trim();
-      const inicioStr = document.getElementById('fechaInicio').value;
-      const finStr = document.getElementById('fechaFin').value;
-
-      if (!nombre || !inicioStr || !finStr) {
-        mensajeError.textContent = 'Rellena todos los campos.';
-        return;
-      }
-
-      // Ojo: new Date('YYYY-MM-DD') interpreta UTC. Añadimos T00:00:00 para forzar hora local.
-      const inicio = new Date(inicioStr + 'T00:00:00');
-      const fin = new Date(finStr + 'T00:00:00');
-
-      if (fin < inicio) {
-        mensajeError.textContent = 'La fecha de fin no puede ser anterior a la de inicio.';
-        return;
-      }
-
-      generarCronograma(nombre, inicio, fin);
-    });
-
-    function generarCronograma(nombre, inicio, fin) {
-      const dias = [];
-      let cursor = new Date(inicio);
-
-      while (cursor <= fin) {
-        const diaSemana = cursor.getDay();
-        dias.push({
-          fecha: new Date(cursor),
-          diaSemana: diaSemana,
-          esFinDeSemana: diaSemana === 0 || diaSemana === 6
-        });
-        cursor.setDate(cursor.getDate() + 1);
-      }
-
-      const lectivos = dias.filter(d => !d.esFinDeSemana);
-      const totalDias = dias.length;
-      const totalLectivos = lectivos.length;
-
-      let html = `
-        <div class="resumen">
-          <strong>${escapeHtml(nombre)}</strong><br>
-          Del ${formatearFecha(inicio)} al ${formatearFecha(fin)}<br>
-          ${totalDias} días naturales · <strong>${totalLectivos} días lectivos</strong> (sin fines de semana)
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Fecha</th>
-              <th>Día</th>
-              <th>Tipo</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      dias.forEach((d, i) => {
-        const clase = d.esFinDeSemana ? 'fin-de-semana' : '';
-        const tipo = d.esFinDeSemana ? 'Fin de semana' : 'Lectivo';
-        html += `
-          <tr class="${clase}">
-            <td>${i + 1}</td>
-            <td>${formatearFecha(d.fecha)}</td>
-            <td>${DIAS_SEMANA[d.diaSemana]}</td>
-            <td>${tipo}</td>
-          </tr>
-        `;
-      });
-
-      html += `</tbody></table>`;
-      resultado.innerHTML = html;
-    }
-
-    function formatearFecha(fecha) {
-      const d = fecha.getDate();
-      const m = MESES[fecha.getMonth()];
-      const y = fecha.getFullYear();
-      return `${d} de ${m} de ${y}`;
-    }
-
-    function escapeHtml(texto) {
-      const div = document.createElement('div');
-      div.textContent = texto;
-      return div.innerHTML;
-    }
-  </script>
-
+  <script src="js/app.js"></script>
 </body>
 </html>
