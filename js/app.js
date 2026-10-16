@@ -13,6 +13,19 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
 
 const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+
+// ---------- Datos de prueba (¡QUITAR EN PRODUCCIÓN!) ----------
+const MODO_PRUEBA = true;
+
+const DATOS_PRUEBA = {
+  nombre: 'Curso de prueba',
+  inicio: '2026-01-15',
+  fin: '2026-02-10',
+  horasDia: 6,
+  horario: '15:00 a 21:00',
+  festivos: ['2026-01-20', '2026-02-03']
+};
+
 // Festivos guardados como "YYYY-MM-DD" en un Set (búsqueda rápida)
 const festivos = new Set();
 
@@ -313,4 +326,19 @@ function escapeHtml(texto) {
 }
 
 // ---------- Inicialización ----------
+aplicarDatosPrueba();
 renderizarFestivos();
+
+function aplicarDatosPrueba() {
+  if (!MODO_PRUEBA) return;
+
+  document.getElementById('nombreCurso').value = DATOS_PRUEBA.nombre;
+  document.getElementById('fechaInicio').value = DATOS_PRUEBA.inicio;
+  document.getElementById('fechaFin').value = DATOS_PRUEBA.fin;
+  document.getElementById('horasDia').value = DATOS_PRUEBA.horasDia;
+  document.getElementById('horario').value = DATOS_PRUEBA.horario;
+
+  DATOS_PRUEBA.festivos.forEach(function (f) {
+    festivos.add(f);
+  });
+}
