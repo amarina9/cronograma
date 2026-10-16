@@ -396,6 +396,7 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
     if (d.fueraDeRango) clases.push('fuera-rango');
     if (d.esFinDeSemana) clases.push('finde');
     if (d.esFestivo) clases.push('festivo');
+    if (d.estado.tipo === 'no-lectivo') clases.push('estado-no-lectivo');
 
     const marcaFestivo = d.esFestivo ? ' *' : '';
     html += `<th class="${clases.join(' ')}" data-fecha="${d.fechaStr}">`;
