@@ -286,3 +286,25 @@ tr:nth-child(even) td { background: #f9f9f9; }
   background: transparent;
   border: none;
 }
+
+/* ---------- Estados de día (preparados para fases siguientes) ---------- */
+.col-dia.estado-lectivo,
+.celda-sesion.estado-lectivo {
+  /* por defecto, sin cambios */
+}
+
+.celda-sesion.estado-no-lectivo,
+.col-dia.estado-no-lectivo {
+  background: #f3f4f6;
+}
+
+/* Estos se colorearán en la fase 3.3 cuando existan módulos */
+.celda-sesion.estado-practicas,
+.col-dia.estado-practicas {
+  /* pendiente */
+}
+
+.celda-sesion.estado-modulo,
+.col-dia.estado-modulo {
+  /* pendiente */
+}
