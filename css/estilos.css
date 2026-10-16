@@ -287,10 +287,15 @@ tr:nth-child(even) td { background: #f9f9f9; }
   border: none;
 }
 
+
 /* ---------- Estados de día (preparados para fases siguientes) ---------- */
 .col-dia.estado-lectivo,
 .celda-sesion.estado-lectivo {
   /* por defecto, sin cambios */
+}
+
+.col-dia.estado-no-lectivo {
+  background: #f3f4f6;
 }
 
 .celda-sesion.estado-no-lectivo,
