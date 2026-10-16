@@ -352,23 +352,10 @@ tr:nth-child(even) td { background: #f9f9f9; }
 /* ---------- Colores de estados ---------- */
 
 /* Prácticas en empresa: verde */
-.col-dia.estado-practicas {
-  background: #d1fae5 !important;
-  color: #065f46;
-}
 
-.col-dia.estado-practicas .nombre-dia,
-.col-dia.estado-practicas .num-dia {
-  color: #065f46;
-}
 
 .celda-sesion.estado-practicas {
   background: #d1fae5;
-}
-
-/* No lectivo: mismo gris que finde */
-.col-dia.estado-no-lectivo {
-  background: #f3f4f6 !important;
 }
 
 .celda-sesion.estado-no-lectivo {
