@@ -1,3 +1,15 @@
+// ---------- Datos de prueba (¡QUITAR EN PRODUCCIÓN!) ----------
+const MODO_PRUEBA = true;
+
+const DATOS_PRUEBA = {
+  nombre: 'Curso de prueba',
+  inicio: '2026-01-15',
+  fin: '2026-02-10',
+  horasDia: 6,
+  horario: '15:00 a 21:00',
+  festivos: ['2026-01-20', '2026-02-03']
+};
+
 // ---------- Referencias al DOM ----------
 const formulario = document.getElementById('formulario');
 const mensajeError = document.getElementById('mensajeError');
@@ -13,21 +25,17 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
 
 const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-
-// ---------- Datos de prueba (¡QUITAR EN PRODUCCIÓN!) ----------
-const MODO_PRUEBA = true;
-
-const DATOS_PRUEBA = {
-  nombre: 'Curso de prueba',
-  inicio: '2026-01-15',
-  fin: '2026-02-10',
-  horasDia: 6,
-  horario: '15:00 a 21:00',
-  festivos: ['2026-01-20', '2026-02-03']
-};
-
 // Festivos guardados como "YYYY-MM-DD" en un Set (búsqueda rápida)
 const festivos = new Set();
+
+// ---------- Modelo de estado ----------
+// Estado de cada día: clave "YYYY-MM-DD", valor { tipo, moduloId? }
+// tipo puede ser: 'lectivo', 'no-lectivo', 'modulo', 'practicas'
+const estadoDias = new Map();
+
+// Lista de módulos del certificado (se rellenará en la fase 3.3 desde el formulario)
+// Cada módulo: { id, nombre, color }
+const modulos = [];
 
 // ---------- Gestión de festivos ----------
 btnAnadirFestivo.addEventListener('click', function () {
@@ -128,18 +136,46 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  const totalDias = dias.length;
-  const totalLectivos = dias.filter(d => !d.esFinDeSemana && !d.esFestivo).length;
   const totalFestivos = dias.filter(d => d.esFestivo).length;
-  const totalSesiones = totalLectivos * horasDia;
+
+  let totalDias = 0;
+  let totalLectivos = 0;
+  let totalNoLectivos = 0;
+  let totalPracticas = 0;
+  let totalModulo = 0;
+  let totalSesiones = 0;
+
+  dias.forEach(function (d) {
+    totalDias++;
+    if (d.esFinDeSemana) return;
+
+    const estado = obtenerEstadoDia(aFormatoISO(d.fecha));
+    if (d.esFestivo || estado.tipo === 'no-lectivo') {
+      totalNoLectivos++;
+    } else if (estado.tipo === 'practicas') {
+      totalPracticas++;
+      totalLectivos++;
+      totalSesiones += horasDia;
+    } else if (estado.tipo === 'modulo') {
+      totalModulo++;
+      totalLectivos++;
+      totalSesiones += horasDia;
+    } else {
+      totalLectivos++;
+      totalSesiones += horasDia;
+    }
+  });
 
   let html = `
     <div class="resumen">
       <strong>${escapeHtml(nombre)}</strong><br>
       Del ${formatearFecha(inicio)} al ${formatearFecha(fin)}<br>
       ${totalDias} días naturales · <strong>${totalLectivos} días lectivos</strong>
+      ${totalNoLectivos > 0 ? ` · ${totalNoLectivos} no lectivo${totalNoLectivos > 1 ? 's' : ''}` : ''}
       ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}<br>
       ${horasDia} horas al día (${escapeHtml(horario)}) · <strong>${totalSesiones} sesiones totales</strong>
+      ${totalModulo > 0 ? `<br>${totalModulo} día${totalModulo > 1 ? 's' : ''} de módulo` : ''}
+      ${totalPracticas > 0 ? `<br>${totalPracticas} día${totalPracticas > 1 ? 's' : ''} de prácticas` : ''}
     </div>
   `;
 
@@ -223,7 +259,6 @@ function obtenerSemanasDelMes(anio, mes) {
 }
 
 function generarBloqueSemana(semana, inicio, fin, horasDia) {
-  // semana es un array de 7 posiciones: null o { fecha }
   const dias = semana.map(function (entrada) {
     if (entrada === null) return null;
 
@@ -233,13 +268,16 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
     const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
     const esFestivo = festivos.has(fechaStr);
     const fueraDeRango = fecha < inicio || fecha > fin;
+    const estado = obtenerEstadoDia(fechaStr);
 
     return {
       fecha: fecha,
+      fechaStr: fechaStr,
       diaSemana: diaSemana,
       esFinDeSemana: esFinDeSemana,
       esFestivo: esFestivo,
-      fueraDeRango: fueraDeRango
+      fueraDeRango: fueraDeRango,
+      estado: estado
     };
   });
 
@@ -258,9 +296,10 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
     if (d.fueraDeRango) clases.push('fuera-rango');
     if (d.esFinDeSemana) clases.push('finde');
     if (d.esFestivo) clases.push('festivo');
+    clases.push('estado-' + d.estado.tipo);
 
     const marcaFestivo = d.esFestivo ? ' *' : '';
-    html += `<th class="${clases.join(' ')}">`;
+    html += `<th class="${clases.join(' ')}" data-fecha="${d.fechaStr}">`;
     html += `<div class="nombre-dia">${NOMBRES_DIAS_CORTOS[(d.diaSemana + 6) % 7]}</div>`;
     html += `<div class="num-dia">${d.fecha.getDate()}${marcaFestivo}</div>`;
     html += `</th>`;
@@ -284,14 +323,21 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
       else if (d.esFestivo) clases.push('festivo');
       else if (d.esFinDeSemana) clases.push('finde');
       else clases.push('lectivo');
+      clases.push('estado-' + d.estado.tipo);
 
-      html += `<td class="${clases.join(' ')}"></td>`;
+      html += `<td class="${clases.join(' ')}" data-fecha="${d.fechaStr}"></td>`;
     });
     html += '</tr>';
   }
   html += '</tbody></table>';
 
   return html;
+}
+
+// ---------- Estado de días ----------
+function obtenerEstadoDia(fechaStr) {
+  // Si no hay estado guardado, el día es lectivo por defecto
+  return estadoDias.get(fechaStr) || { tipo: 'lectivo' };
 }
 
 // ---------- Utilidades de fecha ----------
