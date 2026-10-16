@@ -281,3 +281,8 @@ tr:nth-child(even) td { background: #f9f9f9; }
 .col-dia.fuera-rango .num-dia {
   color: #9ca3af;
 }
+
+.celda-fuera-mes {
+  background: transparent;
+  border: none;
+}
