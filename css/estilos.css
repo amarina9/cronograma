@@ -308,3 +308,78 @@ tr:nth-child(even) td { background: #f9f9f9; }
 .col-dia.estado-modulo {
   /* pendiente */
 }
+
+/* ---------- Menú de estado del día ---------- */
+.menu-dia {
+  position: absolute;
+  z-index: 100;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 0.3rem;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-dia.oculto {
+  display: none;
+}
+
+.menu-opcion {
+  background: transparent;
+  color: #111827;
+  border: none;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.menu-opcion:hover {
+  background: #eff6ff;
+}
+
+.menu-opcion.activo {
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* ---------- Colores de estados ---------- */
+
+/* Prácticas en empresa: verde */
+.col-dia.estado-practicas {
+  background: #d1fae5 !important;
+  color: #065f46;
+}
+
+.col-dia.estado-practicas .nombre-dia,
+.col-dia.estado-practicas .num-dia {
+  color: #065f46;
+}
+
+.celda-sesion.estado-practicas {
+  background: #d1fae5;
+}
+
+/* No lectivo: mismo gris que finde */
+.col-dia.estado-no-lectivo {
+  background: #f3f4f6 !important;
+}
+
+.celda-sesion.estado-no-lectivo {
+  background: #f3f4f6;
+}
+
+/* Cabecera clicable */
+th.col-dia:not(.finde):not(.festivo):not(.fuera-rango):not(.celda-fuera-mes) {
+  cursor: pointer;
+}
+
+th.col-dia:not(.finde):not(.festivo):not(.fuera-rango):not(.celda-fuera-mes):hover {
+  filter: brightness(0.95);
+}
