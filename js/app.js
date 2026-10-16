@@ -472,26 +472,47 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
 
 // ---------- Interacción con el calendario ----------
 resultado.addEventListener('click', function (e) {
+  // 1. ¿Clic en cabecera del día?
   const cabecera = e.target.closest('th.col-dia');
-  if (!cabecera) return;
-  if (cabecera.classList.contains('celda-fuera-mes')) return;
-  if (cabecera.classList.contains('fuera-rango')) return;
-  if (cabecera.classList.contains('finde')) return;
-  if (cabecera.classList.contains('festivo')) return;
+  if (cabecera) {
+    if (cabecera.classList.contains('celda-fuera-mes')) return;
+    if (cabecera.classList.contains('fuera-rango')) return;
+    if (cabecera.classList.contains('finde')) return;
+    if (cabecera.classList.contains('festivo')) return;
 
-  const fechaStr = cabecera.dataset.fecha;
-  if (!fechaStr) return;
+    const fechaStr = cabecera.dataset.fecha;
+    if (!fechaStr) return;
+    abrirMenuDia(fechaStr, cabecera);
+    return;
+  }
 
-  abrirMenuDia(fechaStr, cabecera);
+  // 2. ¿Clic en celda de hora?
+  const celda = e.target.closest('td.celda-sesion');
+  if (celda) {
+    if (celda.classList.contains('celda-fuera-mes')) return;
+    if (celda.classList.contains('fuera-rango')) return;
+    if (celda.classList.contains('finde')) return;
+    if (celda.classList.contains('festivo')) return;
+
+    const fechaStr = celda.dataset.fecha;
+    const hora = parseInt(celda.dataset.hora, 10);
+    if (!fechaStr || !hora) return;
+
+    const estado = obtenerEstadoDia(fechaStr);
+    if (estado.tipo === 'no-lectivo' || estado.tipo === 'practicas') return;
+
+    abrirMenuHora(fechaStr, hora, celda);
+    return;
+  }
 });
 
 // Cerrar el menú al hacer clic fuera
 document.addEventListener('click', function (e) {
-  if (!menuDia.classList.contains('oculto') && !menuDia.contains(e.target)) {
-    if (!e.target.closest('th.col-dia')) {
-      cerrarMenuDia();
-    }
-  }
+  if (menuDia.classList.contains('oculto')) return;
+  if (menuDia.contains(e.target)) return;
+  if (e.target.closest('th.col-dia')) return;
+  if (e.target.closest('td.celda-sesion')) return;
+  cerrarMenuDia();
 });
 
 document.addEventListener('keydown', function (e) {
@@ -518,7 +539,6 @@ function abrirMenuDia(fechaStr, cabecera) {
   if (modulos.length > 0) {
     html += `<div class="menu-separador">Módulos (todo el día)</div>`;
     modulos.forEach(function (m) {
-      // Activo si TODAS las horas del día tienen este módulo asignado
       let activo = '';
       if (estadoActual.tipo === 'modulo' && estadoActual.horas) {
         const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
@@ -552,6 +572,44 @@ function abrirMenuDia(fechaStr, cabecera) {
   });
 }
 
+// ---------- Menú por hora ----------
+function abrirMenuHora(fechaStr, hora, celda) {
+  const moduloActual = obtenerModuloEnHora(fechaStr, hora);
+
+  let html = '';
+
+  // Opción "Sin clase"
+  const activoSinClase = (moduloActual === null) ? ' activo' : '';
+  html += `<button type="button" class="menu-opcion${activoSinClase}" data-tipo="libre">Sin clase</button>`;
+
+  // Módulos
+  if (modulos.length > 0) {
+    html += `<div class="menu-separador">Módulos</div>`;
+    modulos.forEach(function (m) {
+      const activo = (moduloActual === m.id) ? ' activo' : '';
+      html += `<button type="button" class="menu-opcion${activo}" data-tipo="modulo" data-modulo-id="${m.id}">
+        <span class="menu-color" style="background:${m.color}"></span>${escapeHtml(m.nombre)}
+      </button>`;
+    });
+  }
+
+  menuDia.innerHTML = html;
+
+  const rect = celda.getBoundingClientRect();
+  menuDia.classList.remove('oculto');
+  menuDia.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+  menuDia.style.left = (window.scrollX + rect.left) + 'px';
+
+  menuDia.querySelectorAll('.menu-opcion').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const tipo = btn.dataset.tipo;
+      const moduloId = btn.dataset.moduloId;
+      aplicarEstadoHora(fechaStr, hora, tipo, moduloId);
+      cerrarMenuDia();
+    });
+  });
+}
+
 function cerrarMenuDia() {
   menuDia.classList.add('oculto');
   menuDia.innerHTML = '';
@@ -569,6 +627,40 @@ function aplicarEstadoDia(fechaStr, tipo, moduloId, horasDia) {
     for (let h = 1; h <= horasDia; h++) {
       horas[h] = moduloId;
     }
+    estadoDias.set(fechaStr, { tipo: 'modulo', horas: horas });
+  }
+
+  const nombre = document.getElementById('nombreCurso').value.trim();
+  const inicioStr = document.getElementById('fechaInicio').value;
+  const finStr = document.getElementById('fechaFin').value;
+  const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
+  const horario = document.getElementById('horario').value.trim();
+
+  if (!nombre || !inicioStr || !finStr || !horario || !horasDiaActual) return;
+
+  const inicio = new Date(inicioStr + 'T00:00:00');
+  const fin = new Date(finStr + 'T00:00:00');
+
+  generarCronograma(nombre, inicio, fin, horasDiaActual, horario);
+}
+
+function aplicarEstadoHora(fechaStr, hora, tipo, moduloId) {
+  const estadoActual = estadoDias.get(fechaStr);
+  let horas = {};
+
+  if (estadoActual && estadoActual.tipo === 'modulo' && estadoActual.horas) {
+    horas = Object.assign({}, estadoActual.horas);
+  }
+
+  if (tipo === 'libre') {
+    delete horas[hora];
+  } else if (tipo === 'modulo') {
+    horas[hora] = moduloId;
+  }
+
+  if (Object.keys(horas).length === 0) {
+    estadoDias.delete(fechaStr);
+  } else {
     estadoDias.set(fechaStr, { tipo: 'modulo', horas: horas });
   }
 
