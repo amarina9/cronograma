@@ -69,9 +69,16 @@ formulario.addEventListener('submit', function (e) {
   const nombre = document.getElementById('nombreCurso').value.trim();
   const inicioStr = document.getElementById('fechaInicio').value;
   const finStr = document.getElementById('fechaFin').value;
+  const horasDia = parseInt(document.getElementById('horasDia').value, 10);
+  const horario = document.getElementById('horario').value.trim();
 
-  if (!nombre || !inicioStr || !finStr) {
+  if (!nombre || !inicioStr || !finStr || !horario) {
     mensajeError.textContent = 'Rellena todos los campos.';
+    return;
+  }
+
+  if (!horasDia || horasDia < 1 || horasDia > 12) {
+    mensajeError.textContent = 'Las horas al día deben estar entre 1 y 12.';
     return;
   }
 
@@ -83,10 +90,10 @@ formulario.addEventListener('submit', function (e) {
     return;
   }
 
-  generarCronograma(nombre, inicio, fin);
+  generarCronograma(nombre, inicio, fin, horasDia, horario);
 });
 
-function generarCronograma(nombre, inicio, fin) {
+function generarCronograma(nombre, inicio, fin, horasDia, horario) {
   const dias = [];
   let cursor = new Date(inicio);
 
@@ -109,13 +116,15 @@ function generarCronograma(nombre, inicio, fin) {
   const totalDias = dias.length;
   const totalLectivos = dias.filter(d => !d.esFinDeSemana && !d.esFestivo).length;
   const totalFestivos = dias.filter(d => d.esFestivo).length;
+  const totalSesiones = totalLectivos * horasDia;
 
   let html = `
     <div class="resumen">
       <strong>${escapeHtml(nombre)}</strong><br>
       Del ${formatearFecha(inicio)} al ${formatearFecha(fin)}<br>
       ${totalDias} días naturales · <strong>${totalLectivos} días lectivos</strong>
-      ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}
+      ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}<br>
+      ${horasDia} horas al día (${escapeHtml(horario)}) · <strong>${totalSesiones} sesiones totales</strong>
     </div>
     <table>
       <thead>
