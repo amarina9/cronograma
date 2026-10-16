@@ -11,6 +11,8 @@ const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vier
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
+const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
 // Festivos guardados como "YYYY-MM-DD" en un Set (búsqueda rápida)
 const festivos = new Set();
 
@@ -126,42 +128,123 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
       ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}<br>
       ${horasDia} horas al día (${escapeHtml(horario)}) · <strong>${totalSesiones} sesiones totales</strong>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Fecha</th>
-          <th>Día</th>
-          <th>Tipo</th>
-        </tr>
-      </thead>
-      <tbody>
   `;
 
-  dias.forEach((d, i) => {
-    let clase = '';
-    let tipo = 'Lectivo';
+  html += generarVistaCalendario(inicio, fin, horasDia);
 
-    if (d.esFestivo) {
-      clase = 'festivo';
-      tipo = 'Festivo';
-    } else if (d.esFinDeSemana) {
-      clase = 'fin-de-semana';
-      tipo = 'Fin de semana';
+  resultado.innerHTML = html;
+}
+
+// ---------- Vista de calendario ----------
+
+function generarVistaCalendario(inicio, fin, horasDia) {
+  const semanas = obtenerSemanasEntre(inicio, fin);
+
+  let html = '<div class="calendario">';
+  let mesActual = null;
+
+  semanas.forEach(function (semana) {
+    const mesClave = semana.anio * 12 + semana.mes;
+
+    if (mesClave !== mesActual) {
+      if (mesActual !== null) html += '</div>';
+      html += `<div class="mes-bloque">`;
+      html += `<h3 class="mes-titulo">${capitalizar(MESES[semana.mes])} ${semana.anio}</h3>`;
+      mesActual = mesClave;
     }
 
-    html += `
-      <tr class="${clase}">
-        <td>${i + 1}</td>
-        <td>${formatearFecha(d.fecha)}</td>
-        <td>${DIAS_SEMANA[d.diaSemana]}</td>
-        <td>${tipo}</td>
-      </tr>
-    `;
+    html += generarBloqueSemana(semana, inicio, fin, horasDia);
   });
 
-  html += `</tbody></table>`;
-  resultado.innerHTML = html;
+  if (mesActual !== null) html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function obtenerSemanasEntre(inicio, fin) {
+  const primerLunes = new Date(inicio);
+  const diaSemanaInicio = primerLunes.getDay();
+  const offsetInicio = (diaSemanaInicio === 0) ? 6 : diaSemanaInicio - 1;
+  primerLunes.setDate(primerLunes.getDate() - offsetInicio);
+
+  const semanas = [];
+  let cursor = new Date(primerLunes);
+
+  while (cursor <= fin) {
+    const jueves = new Date(cursor);
+    jueves.setDate(jueves.getDate() + 3);
+
+    semanas.push({
+      lunes: new Date(cursor),
+      anio: jueves.getFullYear(),
+      mes: jueves.getMonth()
+    });
+
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  return semanas;
+}
+
+function generarBloqueSemana(semana, inicio, fin, horasDia) {
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const fecha = new Date(semana.lunes);
+    fecha.setDate(fecha.getDate() + i);
+
+    const diaSemana = fecha.getDay();
+    const fechaStr = aFormatoISO(fecha);
+    const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+    const esFestivo = festivos.has(fechaStr);
+    const fueraDeRango = fecha < inicio || fecha > fin;
+
+    dias.push({
+      fecha: fecha,
+      diaSemana: diaSemana,
+      esFinDeSemana: esFinDeSemana,
+      esFestivo: esFestivo,
+      fueraDeRango: fueraDeRango
+    });
+  }
+
+  let html = '<table class="calendario-tabla">';
+
+  // Cabecera: nombre del día + número
+  html += '<thead><tr>';
+  html += '<th class="col-hora"></th>';
+  dias.forEach(function (d) {
+    const clases = ['col-dia'];
+    if (d.fueraDeRango) clases.push('fuera-rango');
+    if (d.esFinDeSemana) clases.push('finde');
+    if (d.esFestivo) clases.push('festivo');
+    html += `<th class="${clases.join(' ')}">`;
+    html += `<div class="nombre-dia">${NOMBRES_DIAS_CORTOS[(d.diaSemana + 6) % 7]}</div>`;
+    html += `<div class="num-dia">${d.fecha.getDate()}</div>`;
+    html += `</th>`;
+  });
+  html += '</tr></thead>';
+
+  // Filas de horas
+  html += '<tbody>';
+  for (let h = 1; h <= horasDia; h++) {
+    html += '<tr>';
+    html += `<td class="col-hora">H${h}</td>`;
+
+    dias.forEach(function (d) {
+      const clases = ['celda-sesion'];
+      if (d.fueraDeRango) clases.push('fuera-rango');
+      else if (d.esFestivo) clases.push('festivo');
+      else if (d.esFinDeSemana) clases.push('finde');
+      else clases.push('lectivo');
+
+      html += `<td class="${clases.join(' ')}"></td>`;
+    });
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  return html;
 }
 
 // ---------- Utilidades de fecha ----------
@@ -182,6 +265,11 @@ function formatearFecha(fecha) {
 function formatearFechaStr(fechaStr) {
   const fecha = new Date(fechaStr + 'T00:00:00');
   return formatearFecha(fecha);
+}
+
+// ---------- Utilidades varias ----------
+function capitalizar(texto) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 function escapeHtml(texto) {
