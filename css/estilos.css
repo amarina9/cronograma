@@ -242,21 +242,9 @@ tr:nth-child(even) td { background: #f9f9f9; }
 }
 
 /* Celdas de sesión (vacías por ahora) */
-.celda-sesion {
-  height: 22px;
-  background: #ffffff;
-}
-
-.celda-sesion.lectivo {
-  background: #ffffff;
-}
-
-.celda-sesion.finde {
-  background: #f3f4f6;
-}
-
+.celda-sesion.finde,
 .celda-sesion.festivo {
-  background: #fee2e2;
+  background: #f3f4f6;
 }
 
 .celda-sesion.fuera-rango {
@@ -264,18 +252,24 @@ tr:nth-child(even) td { background: #f9f9f9; }
 }
 
 /* Cabeceras especiales */
-.col-dia.finde {
+.col-dia.finde,
+.col-dia.festivo {
   background: #f3f4f6;
 }
 
-.col-dia.festivo {
-  background: #fee2e2;
-  color: #991b1b;
+.col-dia.finde .nombre-dia,
+.col-dia.finde .num-dia {
+  color: #9ca3af;
 }
 
-.col-dia.festivo .nombre-dia,
+/* Festivo: mismo gris, pero número más oscuro y con asterisco */
+.col-dia.festivo .nombre-dia {
+  color: #9ca3af;
+}
+
 .col-dia.festivo .num-dia {
-  color: #991b1b;
+  color: #374151;
+  font-weight: 800;
 }
 
 .col-dia.fuera-rango {
