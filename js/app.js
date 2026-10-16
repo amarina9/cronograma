@@ -17,6 +17,7 @@ const resultado = document.getElementById('resultado');
 const inputFestivo = document.getElementById('inputFestivo');
 const btnAnadirFestivo = document.getElementById('btnAnadirFestivo');
 const listaFestivos = document.getElementById('listaFestivos');
+const menuDia = document.getElementById('menuDia');
 
 // ---------- Constantes ----------
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -332,6 +333,96 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
   html += '</tbody></table>';
 
   return html;
+}
+
+// ---------- Interacción con el calendario ----------
+resultado.addEventListener('click', function (e) {
+  const cabecera = e.target.closest('th.col-dia');
+  if (!cabecera) return;
+  if (cabecera.classList.contains('celda-fuera-mes')) return;
+  if (cabecera.classList.contains('fuera-rango')) return;
+  if (cabecera.classList.contains('finde')) return;
+  if (cabecera.classList.contains('festivo')) return;
+
+  const fechaStr = cabecera.dataset.fecha;
+  if (!fechaStr) return;
+
+  abrirMenuDia(fechaStr, cabecera);
+});
+
+// Cerrar el menú al hacer clic fuera
+document.addEventListener('click', function (e) {
+  if (!menuDia.classList.contains('oculto') && !menuDia.contains(e.target)) {
+    if (!e.target.closest('th.col-dia')) {
+      cerrarMenuDia();
+    }
+  }
+});
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') cerrarMenuDia();
+});
+
+// ---------- Menú de estado del día ----------
+function abrirMenuDia(fechaStr, cabecera) {
+  const estadoActual = obtenerEstadoDia(fechaStr).tipo;
+
+  const opciones = [
+    { tipo: 'lectivo', etiqueta: 'Lectivo (por defecto)' },
+    { tipo: 'no-lectivo', etiqueta: 'No lectivo' },
+    { tipo: 'practicas', etiqueta: 'Prácticas en empresa' }
+  ];
+
+  // (Fase 3.3) aquí añadiremos los módulos de la lista
+
+  let html = '';
+  opciones.forEach(function (op) {
+    const activo = op.tipo === estadoActual ? ' activo' : '';
+    html += `<button type="button" class="menu-opcion${activo}" data-tipo="${op.tipo}">${op.etiqueta}</button>`;
+  });
+
+  menuDia.innerHTML = html;
+
+  // Posicionar el menú junto a la cabecera
+  const rect = cabecera.getBoundingClientRect();
+  menuDia.classList.remove('oculto');
+  menuDia.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+  menuDia.style.left = (window.scrollX + rect.left) + 'px';
+
+  // Listener de las opciones
+  menuDia.querySelectorAll('.menu-opcion').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const tipo = btn.dataset.tipo;
+      aplicarEstadoDia(fechaStr, tipo);
+      cerrarMenuDia();
+    });
+  });
+}
+
+function cerrarMenuDia() {
+  menuDia.classList.add('oculto');
+  menuDia.innerHTML = '';
+}
+
+function aplicarEstadoDia(fechaStr, tipo) {
+  if (tipo === 'lectivo') {
+    estadoDias.delete(fechaStr);
+  } else {
+    estadoDias.set(fechaStr, { tipo: tipo });
+  }
+  // Re-renderizar el cronograma con el estado actual
+  const nombre = document.getElementById('nombreCurso').value.trim();
+  const inicioStr = document.getElementById('fechaInicio').value;
+  const finStr = document.getElementById('fechaFin').value;
+  const horasDia = parseInt(document.getElementById('horasDia').value, 10);
+  const horario = document.getElementById('horario').value.trim();
+
+  if (!nombre || !inicioStr || !finStr || !horario || !horasDia) return;
+
+  const inicio = new Date(inicioStr + 'T00:00:00');
+  const fin = new Date(finStr + 'T00:00:00');
+
+  generarCronograma(nombre, inicio, fin, horasDia, horario);
 }
 
 // ---------- Estado de días ----------
