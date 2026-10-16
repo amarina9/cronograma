@@ -474,3 +474,24 @@ th.col-dia:not(.finde):not(.festivo):not(.fuera-rango):not(.celda-fuera-mes):hov
   font-size: 0.85rem;
   color: #111827;
 }
+
+/* Celdas de hora clicables */
+td.celda-sesion.lectivo,
+td.celda-sesion.estado-modulo {
+  cursor: pointer;
+}
+
+td.celda-sesion.lectivo:hover,
+td.celda-sesion.estado-modulo:hover {
+  filter: brightness(0.95);
+}
+
+/* Las que no son editables: sin cursor especial */
+td.celda-sesion.finde,
+td.celda-sesion.festivo,
+td.celda-sesion.fuera-rango,
+td.celda-sesion.estado-no-lectivo,
+td.celda-sesion.estado-practicas,
+td.celda-sesion.celda-fuera-mes {
+  cursor: default;
+}
