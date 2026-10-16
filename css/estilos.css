@@ -383,3 +383,102 @@ th.col-dia:not(.finde):not(.festivo):not(.fuera-rango):not(.celda-fuera-mes) {
 th.col-dia:not(.finde):not(.festivo):not(.fuera-rango):not(.celda-fuera-mes):hover {
   filter: brightness(0.95);
 }
+
+/* ---------- Bloque de módulos ---------- */
+.modulos-bloque {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.modulos-bloque h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+
+.modulos-entrada {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.modulos-entrada input { flex: 1; }
+
+.lista-modulos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.item-modulo {
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #111827;
+}
+
+.item-modulo button {
+  background: transparent;
+  color: #374151;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.item-modulo button:hover { color: #111827; background: transparent; }
+
+.sin-modulos {
+  color: #999;
+  font-size: 0.9rem;
+  font-style: italic;
+  background: transparent !important;
+}
+
+/* ---------- Menú del día: separador y colores ---------- */
+.menu-separador {
+  padding: 0.4rem 0.75rem 0.2rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+}
+
+.menu-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.menu-opcion {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- Resumen: chips de módulos ---------- */
+.resumen-modulos {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip-modulo {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #111827;
+}
