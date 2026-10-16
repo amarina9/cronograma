@@ -47,8 +47,11 @@ let contadorModulos = 0;
 const festivos = new Set();
 
 // ---------- Modelo de estado ----------
-// Estado de cada día: clave "YYYY-MM-DD", valor { tipo, moduloId? }
-// tipo puede ser: 'lectivo', 'no-lectivo', 'modulo', 'practicas'
+// Estado de cada día: clave "YYYY-MM-DD", valor uno de:
+//   { tipo: 'no-lectivo' }
+//   { tipo: 'practicas' }
+//   { tipo: 'modulo', horas: { 1: 'mod-1', 2: 'mod-1', 3: 'mod-2', ... } }
+// Si no hay entrada en el Map, el día es lectivo sin asignaciones.
 const estadoDias = new Map();
 
 // Lista de módulos del certificado
@@ -162,10 +165,19 @@ function eliminarModulo(id) {
   if (idx === -1) return;
   modulos.splice(idx, 1);
 
-  // Quitar el módulo de todos los días que lo tuvieran asignado
+  // Quitar el módulo de todas las asignaciones (por hora) que lo tuvieran
   estadoDias.forEach(function (estado, fechaStr) {
-    if (estado.tipo === 'modulo' && estado.moduloId === id) {
-      estadoDias.delete(fechaStr);
+    if (estado.tipo === 'modulo' && estado.horas) {
+      let quitarAlguno = false;
+      Object.keys(estado.horas).forEach(function (h) {
+        if (estado.horas[h] === id) {
+          delete estado.horas[h];
+          quitarAlguno = true;
+        }
+      });
+      if (quitarAlguno && Object.keys(estado.horas).length === 0) {
+        estadoDias.delete(fechaStr);
+      }
     }
   });
 
@@ -231,31 +243,45 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
   let totalLectivos = 0;
   let totalNoLectivos = 0;
   let totalPracticas = 0;
-  let totalModulo = 0;
   let totalSesiones = 0;
 
-  const diasPorModulo = new Map();
+  const horasPorModulo = new Map();
 
   dias.forEach(function (d) {
     totalDias++;
     if (d.esFinDeSemana) return;
 
-    const estado = obtenerEstadoDia(aFormatoISO(d.fecha));
+    const fechaStr = aFormatoISO(d.fecha);
+    const estado = obtenerEstadoDia(fechaStr);
+
     if (d.esFestivo || estado.tipo === 'no-lectivo') {
       totalNoLectivos++;
-    } else if (estado.tipo === 'practicas') {
-      totalPracticas++;
-      totalLectivos++;
-      totalSesiones += horasDia;
-    } else if (estado.tipo === 'modulo') {
-      totalModulo++;
-      totalLectivos++;
-      totalSesiones += horasDia;
-      diasPorModulo.set(estado.moduloId, (diasPorModulo.get(estado.moduloId) || 0) + 1);
-    } else {
-      totalLectivos++;
-      totalSesiones += horasDia;
+      return;
     }
+
+    totalLectivos++;
+
+    if (estado.tipo === 'practicas') {
+      totalPracticas++;
+      totalSesiones += horasDia;
+      return;
+    }
+
+    if (estado.tipo === 'modulo') {
+      let horasAsignadasEsteDia = 0;
+      for (let h = 1; h <= horasDia; h++) {
+        const modId = estado.horas ? estado.horas[h] : null;
+        if (modId) {
+          horasPorModulo.set(modId, (horasPorModulo.get(modId) || 0) + 1);
+          horasAsignadasEsteDia++;
+        }
+      }
+      totalSesiones += horasAsignadasEsteDia;
+      return;
+    }
+
+    // Día lectivo sin nada asignado
+    totalSesiones += horasDia;
   });
 
   let html = `
@@ -266,13 +292,12 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
       ${totalNoLectivos > 0 ? ` · ${totalNoLectivos} no lectivo${totalNoLectivos > 1 ? 's' : ''}` : ''}
       ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}<br>
       ${horasDia} horas al día (${escapeHtml(horario)}) · <strong>${totalSesiones} sesiones totales</strong>
-      ${totalModulo > 0 ? `<br>${totalModulo} día${totalModulo > 1 ? 's' : ''} de módulo` : ''}
-      ${totalPracticas > 0 ? `<br>${totalPracticas} día${totalPracticas > 1 ? 's' : ''} de prácticas` : ''}
+      ${totalPracticas > 0 ? `<br>${totalPracticas} día${totalPracticas > 1 ? 's' : ''} de prácticas (${totalPracticas * horasDia}h)` : ''}
       ${modulos.length > 0 ? `
         <div class="resumen-modulos">
           ${modulos.map(function (m) {
-            const dias = diasPorModulo.get(m.id) || 0;
-            return `<span class="chip-modulo" style="background:${m.color}">${escapeHtml(m.nombre)}: ${dias} día${dias !== 1 ? 's' : ''}</span>`;
+            const horas = horasPorModulo.get(m.id) || 0;
+            return `<span class="chip-modulo" style="background:${m.color}">${escapeHtml(m.nombre)}: ${horas}h</span>`;
           }).join('')}
         </div>
       ` : ''}
@@ -325,13 +350,10 @@ function obtenerMesesEntre(inicio, fin) {
 }
 
 function obtenerSemanasDelMes(anio, mes) {
-  // Devuelve un array de semanas. Cada semana es un array de 7 posiciones,
-  // cada posición es null (día fuera del mes) o un objeto { fecha }.
   const primerDia = new Date(anio, mes, 1);
   const ultimoDia = new Date(anio, mes + 1, 0);
   const diasEnMes = ultimoDia.getDate();
 
-  // getDay(): 0=domingo. Queremos 0=lunes.
   const diaSemanaPrimerDia = primerDia.getDay();
   const offsetInicio = (diaSemanaPrimerDia === 0) ? 6 : diaSemanaPrimerDia - 1;
 
@@ -423,15 +445,23 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
       else if (d.esFestivo) clases.push('festivo');
       else if (d.esFinDeSemana) clases.push('finde');
       else clases.push('lectivo');
-      clases.push('estado-' + d.estado.tipo);
 
       let estiloExtraCelda = '';
-      if (d.estado.tipo === 'modulo' && d.estado.moduloId) {
-        const mod = modulos.find(function (m) { return m.id === d.estado.moduloId; });
-        if (mod) estiloExtraCelda = ` style="background:${mod.color}"`;
+
+      if (d.estado.tipo === 'no-lectivo') {
+        clases.push('estado-no-lectivo');
+      } else if (d.estado.tipo === 'practicas') {
+        clases.push('estado-practicas');
+      } else if (d.estado.tipo === 'modulo') {
+        clases.push('estado-modulo');
+        const moduloId = d.estado.horas ? d.estado.horas[h] : null;
+        if (moduloId) {
+          const mod = modulos.find(function (m) { return m.id === moduloId; });
+          if (mod) estiloExtraCelda = ` style="background:${mod.color}"`;
+        }
       }
 
-      html += `<td class="${clases.join(' ')}" data-fecha="${d.fechaStr}"${estiloExtraCelda}></td>`;
+      html += `<td class="${clases.join(' ')}" data-fecha="${d.fechaStr}" data-hora="${h}"${estiloExtraCelda}></td>`;
     });
     html += '</tr>';
   }
@@ -474,7 +504,6 @@ function abrirMenuDia(fechaStr, cabecera) {
 
   let html = '';
 
-  // Opciones básicas
   const opcionesBase = [
     { tipo: 'lectivo', etiqueta: 'Lectivo (por defecto)' },
     { tipo: 'no-lectivo', etiqueta: 'No lectivo' },
@@ -486,11 +515,19 @@ function abrirMenuDia(fechaStr, cabecera) {
     html += `<button type="button" class="menu-opcion${activo}" data-tipo="${op.tipo}">${op.etiqueta}</button>`;
   });
 
-  // Módulos (si hay)
   if (modulos.length > 0) {
-    html += `<div class="menu-separador">Módulos</div>`;
+    html += `<div class="menu-separador">Módulos (todo el día)</div>`;
     modulos.forEach(function (m) {
-      const activo = (estadoActual.tipo === 'modulo' && estadoActual.moduloId === m.id) ? ' activo' : '';
+      // Activo si TODAS las horas del día tienen este módulo asignado
+      let activo = '';
+      if (estadoActual.tipo === 'modulo' && estadoActual.horas) {
+        const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
+        let todas = true;
+        for (let h = 1; h <= horasDiaActual; h++) {
+          if (estadoActual.horas[h] !== m.id) { todas = false; break; }
+        }
+        if (todas) activo = ' activo';
+      }
       html += `<button type="button" class="menu-opcion${activo}" data-tipo="modulo" data-modulo-id="${m.id}">
         <span class="menu-color" style="background:${m.color}"></span>${escapeHtml(m.nombre)}
       </button>`;
@@ -499,18 +536,17 @@ function abrirMenuDia(fechaStr, cabecera) {
 
   menuDia.innerHTML = html;
 
-  // Posicionar el menú junto a la cabecera
   const rect = cabecera.getBoundingClientRect();
   menuDia.classList.remove('oculto');
   menuDia.style.top = (window.scrollY + rect.bottom + 4) + 'px';
   menuDia.style.left = (window.scrollX + rect.left) + 'px';
 
-  // Listener de las opciones
   menuDia.querySelectorAll('.menu-opcion').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const tipo = btn.dataset.tipo;
       const moduloId = btn.dataset.moduloId;
-      aplicarEstadoDia(fechaStr, tipo, moduloId);
+      const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
+      aplicarEstadoDia(fechaStr, tipo, moduloId, horasDiaActual);
       cerrarMenuDia();
     });
   });
@@ -521,33 +557,47 @@ function cerrarMenuDia() {
   menuDia.innerHTML = '';
 }
 
-function aplicarEstadoDia(fechaStr, tipo, moduloId) {
+function aplicarEstadoDia(fechaStr, tipo, moduloId, horasDia) {
   if (tipo === 'lectivo') {
     estadoDias.delete(fechaStr);
+  } else if (tipo === 'no-lectivo') {
+    estadoDias.set(fechaStr, { tipo: 'no-lectivo' });
+  } else if (tipo === 'practicas') {
+    estadoDias.set(fechaStr, { tipo: 'practicas' });
   } else if (tipo === 'modulo') {
-    estadoDias.set(fechaStr, { tipo: 'modulo', moduloId: moduloId });
-  } else {
-    estadoDias.set(fechaStr, { tipo: tipo });
+    const horas = {};
+    for (let h = 1; h <= horasDia; h++) {
+      horas[h] = moduloId;
+    }
+    estadoDias.set(fechaStr, { tipo: 'modulo', horas: horas });
   }
 
   const nombre = document.getElementById('nombreCurso').value.trim();
   const inicioStr = document.getElementById('fechaInicio').value;
   const finStr = document.getElementById('fechaFin').value;
-  const horasDia = parseInt(document.getElementById('horasDia').value, 10);
+  const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
   const horario = document.getElementById('horario').value.trim();
 
-  if (!nombre || !inicioStr || !finStr || !horario || !horasDia) return;
+  if (!nombre || !inicioStr || !finStr || !horario || !horasDiaActual) return;
 
   const inicio = new Date(inicioStr + 'T00:00:00');
   const fin = new Date(finStr + 'T00:00:00');
 
-  generarCronograma(nombre, inicio, fin, horasDia, horario);
+  generarCronograma(nombre, inicio, fin, horasDiaActual, horario);
 }
 
 // ---------- Estado de días ----------
 function obtenerEstadoDia(fechaStr) {
-  // Si no hay estado guardado, el día es lectivo por defecto
   return estadoDias.get(fechaStr) || { tipo: 'lectivo' };
+}
+
+// Devuelve el id de módulo asignado a una hora concreta de un día,
+// o null si esa hora está libre.
+function obtenerModuloEnHora(fechaStr, hora) {
+  const estado = estadoDias.get(fechaStr);
+  if (!estado || estado.tipo !== 'modulo') return null;
+  if (!estado.horas) return null;
+  return estado.horas[hora] || null;
 }
 
 // ---------- Utilidades de fecha ----------
