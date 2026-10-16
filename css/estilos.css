@@ -180,3 +180,110 @@ tr:nth-child(even) td { background: #f9f9f9; }
   margin-top: 0.5rem;
   font-weight: 600;
 }
+
+/* ---------- Calendario ---------- */
+.calendario {
+  margin-top: 1.5rem;
+}
+
+.mes-bloque {
+  margin-bottom: 2rem;
+}
+
+.mes-titulo {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #2563eb;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 0.3rem;
+}
+
+.calendario-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  table-layout: fixed;
+}
+
+.calendario-tabla th,
+.calendario-tabla td {
+  border: 1px solid #d1d5db;
+  padding: 0.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.calendario-tabla thead th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.col-hora {
+  width: 40px;
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.75rem;
+}
+
+.col-dia .nombre-dia {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+}
+
+.col-dia .num-dia {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 0.1rem;
+}
+
+/* Celdas de sesión (vacías por ahora) */
+.celda-sesion {
+  height: 22px;
+  background: #ffffff;
+}
+
+.celda-sesion.lectivo {
+  background: #ffffff;
+}
+
+.celda-sesion.finde {
+  background: #f3f4f6;
+}
+
+.celda-sesion.festivo {
+  background: #fee2e2;
+}
+
+.celda-sesion.fuera-rango {
+  background: #fafafa;
+}
+
+/* Cabeceras especiales */
+.col-dia.finde {
+  background: #f3f4f6;
+}
+
+.col-dia.festivo {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.col-dia.festivo .nombre-dia,
+.col-dia.festivo .num-dia {
+  color: #991b1b;
+}
+
+.col-dia.fuera-rango {
+  background: #fafafa;
+  opacity: 0.4;
+}
+
+.col-dia.fuera-rango .nombre-dia,
+.col-dia.fuera-rango .num-dia {
+  color: #9ca3af;
+}
