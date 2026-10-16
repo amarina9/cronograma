@@ -138,89 +138,118 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
 // ---------- Vista de calendario ----------
 
 function generarVistaCalendario(inicio, fin, horasDia) {
-  const semanas = obtenerSemanasEntre(inicio, fin);
+  const meses = obtenerMesesEntre(inicio, fin);
 
   let html = '<div class="calendario">';
-  let mesActual = null;
 
-  semanas.forEach(function (semana) {
-    const mesClave = semana.anio * 12 + semana.mes;
+  meses.forEach(function (mesInfo) {
+    html += `<div class="mes-bloque">`;
+    html += `<h3 class="mes-titulo">${capitalizar(MESES[mesInfo.mes])} ${mesInfo.anio}</h3>`;
 
-    if (mesClave !== mesActual) {
-      if (mesActual !== null) html += '</div>';
-      html += `<div class="mes-bloque">`;
-      html += `<h3 class="mes-titulo">${capitalizar(MESES[semana.mes])} ${semana.anio}</h3>`;
-      mesActual = mesClave;
-    }
+    const semanasDelMes = obtenerSemanasDelMes(mesInfo.anio, mesInfo.mes);
+    semanasDelMes.forEach(function (semana) {
+      html += generarBloqueSemana(semana, inicio, fin, horasDia);
+    });
 
-    html += generarBloqueSemana(semana, inicio, fin, horasDia);
+    html += '</div>';
   });
-
-  if (mesActual !== null) html += '</div>';
 
   html += '</div>';
   return html;
 }
 
-function obtenerSemanasEntre(inicio, fin) {
-  const primerLunes = new Date(inicio);
-  const diaSemanaInicio = primerLunes.getDay();
-  const offsetInicio = (diaSemanaInicio === 0) ? 6 : diaSemanaInicio - 1;
-  primerLunes.setDate(primerLunes.getDate() - offsetInicio);
+function obtenerMesesEntre(inicio, fin) {
+  const meses = [];
+  let anio = inicio.getFullYear();
+  let mes = inicio.getMonth();
+
+  while (anio < fin.getFullYear() || (anio === fin.getFullYear() && mes <= fin.getMonth())) {
+    meses.push({ anio: anio, mes: mes });
+    mes++;
+    if (mes > 11) {
+      mes = 0;
+      anio++;
+    }
+  }
+
+  return meses;
+}
+
+function obtenerSemanasDelMes(anio, mes) {
+  // Devuelve un array de semanas. Cada semana es un array de 7 posiciones,
+  // cada posición es null (día fuera del mes) o un objeto { fecha }.
+  const primerDia = new Date(anio, mes, 1);
+  const ultimoDia = new Date(anio, mes + 1, 0);
+  const diasEnMes = ultimoDia.getDate();
+
+  // getDay(): 0=domingo. Queremos 0=lunes.
+  const diaSemanaPrimerDia = primerDia.getDay();
+  const offsetInicio = (diaSemanaPrimerDia === 0) ? 6 : diaSemanaPrimerDia - 1;
+
+  const totalCeldas = offsetInicio + diasEnMes;
+  const totalSemanas = Math.ceil(totalCeldas / 7);
 
   const semanas = [];
-  let cursor = new Date(primerLunes);
+  let contadorDia = 1;
 
-  while (cursor <= fin) {
-    const jueves = new Date(cursor);
-    jueves.setDate(jueves.getDate() + 3);
-
-    semanas.push({
-      lunes: new Date(cursor),
-      anio: jueves.getFullYear(),
-      mes: jueves.getMonth()
-    });
-
-    cursor.setDate(cursor.getDate() + 7);
+  for (let s = 0; s < totalSemanas; s++) {
+    const semana = [];
+    for (let col = 0; col < 7; col++) {
+      const indiceGlobal = s * 7 + col;
+      if (indiceGlobal < offsetInicio || contadorDia > diasEnMes) {
+        semana.push(null);
+      } else {
+        semana.push({ fecha: new Date(anio, mes, contadorDia) });
+        contadorDia++;
+      }
+    }
+    semanas.push(semana);
   }
 
   return semanas;
 }
 
 function generarBloqueSemana(semana, inicio, fin, horasDia) {
-  const dias = [];
-  for (let i = 0; i < 7; i++) {
-    const fecha = new Date(semana.lunes);
-    fecha.setDate(fecha.getDate() + i);
+  // semana es un array de 7 posiciones: null o { fecha }
+  const dias = semana.map(function (entrada) {
+    if (entrada === null) return null;
 
+    const fecha = entrada.fecha;
     const diaSemana = fecha.getDay();
     const fechaStr = aFormatoISO(fecha);
     const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
     const esFestivo = festivos.has(fechaStr);
     const fueraDeRango = fecha < inicio || fecha > fin;
 
-    dias.push({
+    return {
       fecha: fecha,
       diaSemana: diaSemana,
       esFinDeSemana: esFinDeSemana,
       esFestivo: esFestivo,
       fueraDeRango: fueraDeRango
-    });
-  }
+    };
+  });
 
   let html = '<table class="calendario-tabla">';
 
-  // Cabecera: nombre del día + número
+  // Cabecera
   html += '<thead><tr>';
   html += '<th class="col-hora"></th>';
   dias.forEach(function (d) {
+    if (d === null) {
+      html += `<th class="col-dia celda-fuera-mes"></th>`;
+      return;
+    }
+
     const clases = ['col-dia'];
     if (d.fueraDeRango) clases.push('fuera-rango');
     if (d.esFinDeSemana) clases.push('finde');
     if (d.esFestivo) clases.push('festivo');
+
+    const marcaFestivo = d.esFestivo ? ' *' : '';
     html += `<th class="${clases.join(' ')}">`;
     html += `<div class="nombre-dia">${NOMBRES_DIAS_CORTOS[(d.diaSemana + 6) % 7]}</div>`;
-    html += `<div class="num-dia">${d.fecha.getDate()}</div>`;
+    html += `<div class="num-dia">${d.fecha.getDate()}${marcaFestivo}</div>`;
     html += `</th>`;
   });
   html += '</tr></thead>';
@@ -232,6 +261,11 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
     html += `<td class="col-hora">H${h}</td>`;
 
     dias.forEach(function (d) {
+      if (d === null) {
+        html += `<td class="celda-sesion celda-fuera-mes"></td>`;
+        return;
+      }
+
       const clases = ['celda-sesion'];
       if (d.fueraDeRango) clases.push('fuera-rango');
       else if (d.esFestivo) clases.push('festivo');
