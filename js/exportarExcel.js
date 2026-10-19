@@ -125,7 +125,7 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   });
 
   const estiloCeldaPracticas = Object.assign({}, estiloCeldaBase, {
-    fill: { fgColor: { rgb: 'd1fae5' } }
+    fill: { fgColor: { rgb: 'fdba74' } }
   });
 
   const estiloTituloLeyenda = {
@@ -148,7 +148,7 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   modulos.forEach(function (m) {
     entradasLeyenda.push({ color: m.color, texto: m.nombre });
   });
-  entradasLeyenda.push({ color: '#d1fae5', texto: 'Prácticas en empresa' });
+  entradasLeyenda.push({ color: '#fdba74', texto: 'Prácticas en empresa' });
   entradasLeyenda.push({ color: '#f3f4f6', texto: 'No lectivo' });
   entradasLeyenda.push({ color: '#f3f4f6', texto: 'Festivos' });
   entradasLeyenda.push({ color: '#fafafa', texto: 'Fuera de rango' });
