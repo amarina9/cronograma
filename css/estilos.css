@@ -495,3 +495,27 @@ td.celda-sesion.estado-practicas,
 td.celda-sesion.celda-fuera-mes {
   cursor: default;
 }
+
+/* ---------- Botón de exportación ---------- */
+.barra-acciones {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-exportar {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-exportar:hover {
+  background: #047857;
+}
