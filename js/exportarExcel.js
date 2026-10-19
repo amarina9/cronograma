@@ -131,7 +131,7 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       { v: '', s: null }, { v: '', s: null }, { v: '', s: null }, { v: '', s: null }
     ]);
 
-    const semanas = obtenerSemanasDelMes(mesInfo.anio, mesInfo.mes);
+    const semanas = obtenerSemanasDelMes(mFesInfo.anio, mesInfo.mes);
     semanas.forEach(function (semana) {
       const filaNombres = [{ v: '', s: null }];
       const filaNumeros = [{ v: '', s: null }];
@@ -390,7 +390,35 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
       { v: '', s: estiloCeldaProfesorVacia }
     ]);
   }
+  // Fila de totales
+  const totalHorasModulos = modulos.reduce(function (acc, m) {
+    return acc + (horasPorModulo.get(m.id) || 0);
+  }, 0);
 
+  const estiloCeldaTotalLabel = {
+    font: { bold: true, color: { rgb: '1e3a8a' } },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    alignment: { horizontal: 'right', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaTotalHoras = {
+    font: { bold: true, color: { rgb: '1e3a8a' } },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaTotalVacia = {
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    border: bordeFino
+  };
+
+  filas.push([
+    { v: 'TOTAL', s: estiloCeldaTotalLabel },
+    { v: totalHorasModulos, s: estiloCeldaTotalHoras },
+    { v: '', s: estiloCeldaTotalVacia }
+  ]);
   // Construcción de la hoja
   const hoja = XLSX.utils.aoa_to_sheet(
     filas.map(function (fila) {
