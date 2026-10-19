@@ -21,6 +21,7 @@ const menuDia = document.getElementById('menuDia');
 const inputModulo = document.getElementById('inputModulo');
 const btnAnadirModulo = document.getElementById('btnAnadirModulo');
 const listaModulos = document.getElementById('listaModulos');
+const btnExportarExcel = document.getElementById('btnExportarExcel');
 
 // ---------- Constantes ----------
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -29,33 +30,23 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
 
 const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-// Paleta de colores para módulos (se asignan en orden circular)
 const PALETA_MODULOS = [
-  '#bfdbfe', // azul
-  '#fbcfe8', // rosa
-  '#fde68a', // amarillo
-  '#c7d2fe', // lavanda
-  '#a7f3d0', // verde menta
-  '#fed7aa', // naranja
-  '#ddd6fe', // violeta
-  '#fecaca'  // rojo suave
+  '#bfdbfe',
+  '#fbcfe8',
+  '#fde68a',
+  '#c7d2fe',
+  '#a7f3d0',
+  '#fed7aa',
+  '#ddd6fe',
+  '#fecaca'
 ];
 
 let contadorModulos = 0;
 
-// Festivos guardados como "YYYY-MM-DD" en un Set (búsqueda rápida)
 const festivos = new Set();
 
 // ---------- Modelo de estado ----------
-// Estado de cada día: clave "YYYY-MM-DD", valor uno de:
-//   { tipo: 'no-lectivo' }
-//   { tipo: 'practicas' }
-//   { tipo: 'modulo', horas: { 1: 'mod-1', 2: 'mod-1', 3: 'mod-2', ... } }
-// Si no hay entrada en el Map, el día es lectivo sin asignaciones.
 const estadoDias = new Map();
-
-// Lista de módulos del certificado
-// Cada módulo: { id, nombre, color }
 const modulos = [];
 
 // ---------- Gestión de festivos ----------
@@ -304,18 +295,10 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
 
   html += generarVistaCalendario(inicio, fin, horasDia);
 
-  html += `
-    <div class="barra-acciones">
-      <button type="button" class="btn-exportar" id="btnExportarExcel">Exportar a Excel</button>
-    </div>
-  `;
-
   resultado.innerHTML = html;
 
-  const btnExportar = document.getElementById('btnExportarExcel');
-  if (btnExportar) {
-    btnExportar.addEventListener('click', exportarAExcel);
-  }
+  // Mostrar el botón de exportar (que estaba oculto al inicio)
+  btnExportarExcel.classList.remove('oculto');
 }
 
 // ---------- Vista de calendario ----------
@@ -1080,6 +1063,9 @@ function escapeHtml(texto) {
 aplicarDatosPrueba();
 renderizarFestivos();
 renderizarModulos();
+
+// El botón de exportar empieza oculto y solo se engancha una vez
+btnExportarExcel.addEventListener('click', exportarAExcel);
 
 function aplicarDatosPrueba() {
   if (!MODO_PRUEBA) return;
