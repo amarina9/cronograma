@@ -44,8 +44,8 @@ function exportarAExcel() {
 
 function construirHojaCronograma(inicio, fin, horasDia) {
   const filas = [];
-  const anchos = [{ wch: 6 }];
-  for (let i = 0; i < 7; i++) anchos.push({ wch: 8 });
+  const fusiones = []; // rangos a fusionar: { s: { r, c }, e: { r, c } }
+  const estilosPorCelda = []; // [{ r, c, s }] para aplicar después
 
   const bordeFino = {
     top: { style: 'thin', color: { rgb: 'd1d5db' } },
@@ -54,10 +54,13 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     right: { style: 'thin', color: { rgb: 'd1d5db' } }
   };
 
+  const bordeGruesoSeparador = { style: 'medium', color: { rgb: '6b7280' } };
+
   const estiloTituloMes = {
-    font: { bold: true, sz: 13, color: { rgb: '1e3a8a' } },
-    alignment: { horizontal: 'left', vertical: 'center' },
-    border: { top: { style: 'thin', color: { rgb: '1e3a8a' } } }
+    font: { bold: true, sz: 14, color: { rgb: '1e3a8a' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    border: bordeFino
   };
 
   const estiloCabeceraDia = {
@@ -122,24 +125,51 @@ function construirHojaCronograma(inicio, fin, horasDia) {
 
   const meses = obtenerMesesEntre(inicio, fin);
 
+  // Cada mes arranca con un nuevo bloque horizontal.
+  // Primera columna siempre para etiquetas de horas.
+  // El resto: 7 columnas por semana, sin columnas separadoras
+  // (la separación se hace con borde grueso entre la última y primera columna de semanas contiguas).
+
+  let filaActual = 0;
+  let maxColumnas = 1; // iremos actualizando
+
   meses.forEach(function (mesInfo, indexMes) {
-    if (indexMes > 0) filas.push([{ v: '', s: null }]);
-
-    filas.push([
-      { v: capitalizar(MESES[mesInfo.mes]) + ' ' + mesInfo.anio, s: estiloTituloMes },
-      { v: '', s: null }, { v: '', s: null }, { v: '', s: null },
-      { v: '', s: null }, { v: '', s: null }, { v: '', s: null }, { v: '', s: null }
-    ]);
-
     const semanas = obtenerSemanasDelMes(mesInfo.anio, mesInfo.mes);
-    semanas.forEach(function (semana) {
-      const filaNombres = [{ v: '', s: null }];
-      const filaNumeros = [{ v: '', s: null }];
+    const columnasMes = 1 + semanas.length * 7; // 1 (horas) + 7 por semana
+    if (columnasMes > maxColumnas) maxColumnas = columnasMes;
 
-      semana.forEach(function (entrada) {
+    if (indexMes > 0) {
+      // Fila vacía separadora entre meses
+      filas.push([]);
+      filaActual++;
+    }
+
+    // ---------- Fila 1: título del mes (fusionada de col 1 a columnasMes - 1) ----------
+    const filaTitulo = [];
+    for (let c = 0; c < columnasMes; c++) {
+      filaTitulo.push({ v: c === 0 ? capitalizar(MESES[mesInfo.mes]) + ' ' + mesInfo.anio : '', s: null });
+    }
+    filas.push(filaTitulo);
+    fusiones.push({
+      s: { r: filaActual, c: 0 },
+      e: { r: filaActual, c: columnasMes - 1 }
+    });
+    estilosPorCelda.push({ r: filaActual, c: 0, s: estiloTituloMes });
+    filaActual++;
+
+    // ---------- Fila 2: nombres de días ----------
+    const filaNombres = [{ v: '', s: null }];
+    // ---------- Fila 3: números de días ----------
+    const filaNumeros = [{ v: '', s: null }];
+
+    const datosPorColumna = []; // guardamos info por columna para luego pintar filas de horas
+
+    semanas.forEach(function (semana, indexSemana) {
+      semana.forEach(function (entrada, indexDiaSemana) {
         if (entrada === null) {
           filaNombres.push({ v: '', s: null });
           filaNumeros.push({ v: '', s: null });
+          datosPorColumna.push(null);
           return;
         }
 
@@ -167,54 +197,76 @@ function construirHojaCronograma(inicio, fin, horasDia) {
           v: String(fecha.getDate()) + marcaFestivo,
           s: estiloNombre
         });
+
+        datosPorColumna.push({
+          fecha: fecha,
+          fechaStr: fechaStr,
+          esFinde: esFinde,
+          esFestivo: esFestivo,
+          fueraDeRango: fueraDeRango,
+          estado: estado,
+          esUltimoDiaSemana: indexDiaSemana === 6
+        });
+      });
+    });
+
+    filas.push(filaNombres);
+    filaActual++;
+    filas.push(filaNumeros);
+    filaActual++;
+
+    // ---------- Filas de horas ----------
+    for (let h = 1; h <= horasDia; h++) {
+      const fila = [{ v: 'H' + h, s: estiloHoraLabel }];
+      const columnasEstilo = [{ r: filaActual, c: 0, s: estiloHoraLabel }];
+
+      datosPorColumna.forEach(function (d, indexCol) {
+        const colExcel = indexCol + 1; // +1 por la columna de horas
+
+        if (d === null) {
+          fila.push({ v: '', s: null });
+          return;
+        }
+
+        let estilo = estiloCeldaBase;
+        if (d.fueraDeRango) estilo = estiloCeldaFueraRango;
+        else if (d.esFestivo) estilo = estiloCeldaFestivo;
+        else if (d.esFinde) estilo = estiloCeldaFinde;
+        else if (d.estado.tipo === 'no-lectivo') estilo = estiloCeldaNoLectivo;
+        else if (d.estado.tipo === 'practicas') estilo = estiloCeldaPracticas;
+        else if (d.estado.tipo === 'modulo' && d.estado.horas && d.estado.horas[h]) {
+          const modId = d.estado.horas[h];
+          const mod = modulos.find(function (m) { return m.id === modId; });
+          if (mod) {
+            estilo = Object.assign({}, estiloCeldaBase, {
+              fill: { fgColor: { rgb: rgbDeHex(mod.color) } }
+            });
+          }
+        }
+
+        // Aplicar borde grueso entre semanas (después del domingo de cada semana)
+        // El índice de columna global dentro del mes es (indexCol), donde las columnas
+        // van: [semana0: 0..6][semana1: 7..13]... El domingo de cada semana está en
+        // el índice 6, 13, 20...
+        const esDomingoDeSemana = (indexCol % 7) === 6;
+
+        if (esDomingoDeSemana) {
+          estilo = Object.assign({}, estilo, {
+            border: Object.assign({}, estilo.border, {
+              right: bordeGruesoSeparador
+            })
+          });
+        }
+
+        fila.push({ v: '', s: estilo });
       });
 
-      filas.push(filaNombres);
-      filas.push(filaNumeros);
-
-      for (let h = 1; h <= horasDia; h++) {
-        const fila = [{ v: 'H' + h, s: estiloHoraLabel }];
-
-        semana.forEach(function (entrada) {
-          if (entrada === null) {
-            fila.push({ v: '', s: null });
-            return;
-          }
-
-          const fecha = entrada.fecha;
-          const diaSemana = fecha.getDay();
-          const fechaStr = aFormatoISO(fecha);
-          const esFinde = diaSemana === 0 || diaSemana === 6;
-          const esFestivo = festivos.has(fechaStr);
-          const fueraDeRango = fecha < inicio || fecha > fin;
-          const estado = obtenerEstadoDia(fechaStr);
-
-          if (fueraDeRango) { fila.push({ v: '', s: estiloCeldaFueraRango }); return; }
-          if (esFestivo) { fila.push({ v: '', s: estiloCeldaFestivo }); return; }
-          if (esFinde) { fila.push({ v: '', s: estiloCeldaFinde }); return; }
-          if (estado.tipo === 'no-lectivo') { fila.push({ v: '', s: estiloCeldaNoLectivo }); return; }
-          if (estado.tipo === 'practicas') { fila.push({ v: '', s: estiloCeldaPracticas }); return; }
-          if (estado.tipo === 'modulo' && estado.horas) {
-            const modId = estado.horas[h];
-            if (modId) {
-              const mod = modulos.find(function (m) { return m.id === modId; });
-              if (mod) {
-                const estiloCeldaModulo = Object.assign({}, estiloCeldaBase, {
-                  fill: { fgColor: { rgb: rgbDeHex(mod.color) } }
-                });
-                fila.push({ v: '', s: estiloCeldaModulo });
-                return;
-              }
-            }
-          }
-          fila.push({ v: '', s: estiloCeldaBase });
-        });
-
-        filas.push(fila);
-      }
-    });
+      filas.push(fila);
+      filaActual++;
+    }
   });
 
+  // ---------- Construir la hoja ----------
   const hoja = XLSX.utils.aoa_to_sheet(
     filas.map(function (fila) {
       return fila.map(function (celda) {
@@ -225,12 +277,12 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     })
   );
 
+  // Aplicar estilos celda a celda
   filas.forEach(function (fila, r) {
     fila.forEach(function (celda, c) {
       if (celda === null || celda === undefined) return;
       if (typeof celda !== 'object' || !('s' in celda)) return;
       if (!celda.s) return;
-
       const direccion = XLSX.utils.encode_cell({ r: r, c: c });
       if (!hoja[direccion]) {
         hoja[direccion] = { v: celda.v || '', t: 's' };
@@ -239,7 +291,19 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     });
   });
 
+  // Aplicar fusiones
+  if (fusiones.length > 0) {
+    hoja['!merges'] = fusiones;
+  }
+
+  // Anchos de columna: primera columna para "H1..Hn", el resto iguales
+  const anchos = [{ wch: 6 }];
+  for (let i = 1; i < maxColumnas; i++) anchos.push({ wch: 5 });
   hoja['!cols'] = anchos;
+
+  // Altura de filas: las filas de horas, más bajas
+  // (opcional, se puede ajustar si quieres)
+
   return hoja;
 }
 
