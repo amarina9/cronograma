@@ -518,6 +518,11 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     border: bordeFino
   };
 
+  const estiloCabValor = {
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: bordeFino
+  };
+
   const estiloCabTabla = {
     font: { bold: true, color: { rgb: 'ffffff' } },
     fill: { fgColor: { rgb: '2563eb' } },
@@ -619,7 +624,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   filas.push([{ v: 'Nombre', s: estiloCabCampo }, { v: nombre }]);
   filas.push([{ v: 'Fecha inicio', s: estiloCabCampo }, { v: formatearFecha(inicio) }]);
   filas.push([{ v: 'Fecha fin', s: estiloCabCampo }, { v: formatearFecha(fin) }]);
-  filas.push([{ v: 'Horas al día', s: estiloCabCampo }, { v: horasDia }]);
+  filas.push([{ v: 'Horas al día', s: estiloCabCampo }, { v: horasDia, s: estiloCabValor }]);
   filas.push([{ v: 'Horario', s: estiloCabCampo }, { v: horario }]);
   filas.push([
     { v: 'Fecha prueba de selección', s: estiloCabCampo },
@@ -651,11 +656,11 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
 
   // --- Bloque 3: Totales ---
   filas.push([{ v: 'Totales', s: estiloTitulo }]);
-  filas.push([{ v: 'Días naturales', s: estiloCabCampo }, { v: totalDias }]);
-  filas.push([{ v: 'Días lectivos', s: estiloCabCampo }, { v: totalLectivos }]);
-  filas.push([{ v: 'Días no lectivos', s: estiloCabCampo }, { v: totalNoLectivos }]);
-  filas.push([{ v: 'Festivos', s: estiloCabCampo }, { v: totalFestivos }]);
-  filas.push([{ v: 'Días de prácticas', s: estiloCabCampo }, { v: totalPracticas }]);
+  filas.push([{ v: 'Días naturales', s: estiloCabCampo }, { v: totalDias, s: estiloCabValor }]);
+  filas.push([{ v: 'Días lectivos', s: estiloCabCampo }, { v: totalLectivos, s: estiloCabValor }]);
+  filas.push([{ v: 'Días no lectivos', s: estiloCabCampo }, { v: totalNoLectivos, s: estiloCabValor }]);
+  filas.push([{ v: 'Festivos', s: estiloCabCampo }, { v: totalFestivos, s: estiloCabValor }]);
+  filas.push([{ v: 'Días de prácticas', s: estiloCabCampo }, { v: totalPracticas, s: estiloCabValor }]);
   filas.push([]);
 
   // --- Bloque 4: Horas por módulo ---
