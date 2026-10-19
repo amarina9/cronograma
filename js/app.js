@@ -7,7 +7,29 @@ const DATOS_PRUEBA = {
   fin: '2026-02-10',
   horasDia: 6,
   horario: '15:00 a 21:00',
-  festivos: ['2026-01-20', '2026-02-03']
+  horasPracticas: 8,
+  festivos: ['2026-01-20', '2026-02-03'],
+  modulos: [
+    'MF1 - Jardinería básica',
+    'MF2 - Riego y mantenimiento',
+    'MF3 - Poda y tala',
+    'MF4 - Maquinaria'
+  ],
+  dias: {
+    '2026-01-21': { tipo: 'modulo', horas: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } },
+    '2026-01-22': { tipo: 'modulo', horas: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1, 6: 1 } },
+    '2026-01-23': { tipo: 'modulo', horas: { 1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2 } },
+    '2026-01-26': { tipo: 'modulo', horas: { 1: 2, 2: 2, 3: 2, 4: 3, 5: 3, 6: 3 } },
+    '2026-01-27': { tipo: 'practicas' },
+    '2026-01-28': { tipo: 'practicas' },
+    '2026-01-29': { tipo: 'no-lectivo' },
+    '2026-01-30': { tipo: 'modulo', horas: { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3 } },
+    '2026-02-02': { tipo: 'modulo', horas: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } },
+    '2026-02-04': { tipo: 'modulo', horas: { 1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2 } },
+    '2026-02-05': { tipo: 'practicas' },
+    '2026-02-06': { tipo: 'modulo', horas: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2 } },
+    '2026-02-09': { tipo: 'modulo', horas: { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3 } }
+  }
 };
 
 // ---------- Referencias al DOM ----------
@@ -30,6 +52,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
 
 const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+// Paleta de colores para módulos (se asignan en orden circular)
 const PALETA_MODULOS = [
   '#86efac', // verde menta
   '#fda4af', // rosa coral
@@ -49,10 +72,18 @@ const COLOR_PRACTICAS = '#fdba74'; // naranja medio
 
 let contadorModulos = 0;
 
+// Festivos guardados como "YYYY-MM-DD" en un Set (búsqueda rápida)
 const festivos = new Set();
 
 // ---------- Modelo de estado ----------
+// Estado de cada día: clave "YYYY-MM-DD", valor uno de:
+//   { tipo: 'no-lectivo' }
+//   { tipo: 'practicas' }
+//   { tipo: 'modulo', horas: { 1: 'mod-1', 2: 'mod-1', 3: 'mod-2', ... } }
+// Si no hay entrada en el Map, el día es lectivo sin asignaciones.
 const estadoDias = new Map();
+
+// Lista de módulos del certificado
 const modulos = [];
 
 // ---------- Gestión de festivos ----------
@@ -191,6 +222,7 @@ formulario.addEventListener('submit', function (e) {
   const finStr = document.getElementById('fechaFin').value;
   const horasDia = parseInt(document.getElementById('horasDia').value, 10);
   const horario = document.getElementById('horario').value.trim();
+  const horasPracticas = parseInt(document.getElementById('horasPracticas').value, 10);
 
   if (!nombre || !inicioStr || !finStr || !horario) {
     mensajeError.textContent = 'Rellena todos los campos.';
@@ -202,6 +234,11 @@ formulario.addEventListener('submit', function (e) {
     return;
   }
 
+  if (!horasPracticas || horasPracticas < 1 || horasPracticas > 12) {
+    mensajeError.textContent = 'Las horas/día de prácticas deben estar entre 1 y 12.';
+    return;
+  }
+
   const inicio = new Date(inicioStr + 'T00:00:00');
   const fin = new Date(finStr + 'T00:00:00');
 
@@ -210,10 +247,10 @@ formulario.addEventListener('submit', function (e) {
     return;
   }
 
-  generarCronograma(nombre, inicio, fin, horasDia, horario);
+  generarCronograma(nombre, inicio, fin, horasDia, horario, horasPracticas);
 });
 
-function generarCronograma(nombre, inicio, fin, horasDia, horario) {
+function generarCronograma(nombre, inicio, fin, horasDia, horario, horasPracticas) {
   const dias = [];
   let cursor = new Date(inicio);
 
@@ -259,7 +296,7 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
 
     if (estado.tipo === 'practicas') {
       totalPracticas++;
-      totalSesiones += horasDia;
+      totalSesiones += horasPracticas;
       return;
     }
 
@@ -287,7 +324,7 @@ function generarCronograma(nombre, inicio, fin, horasDia, horario) {
       ${totalNoLectivos > 0 ? ` · ${totalNoLectivos} no lectivo${totalNoLectivos > 1 ? 's' : ''}` : ''}
       ${totalFestivos > 0 ? ` · ${totalFestivos} festivo${totalFestivos > 1 ? 's' : ''}` : ''}<br>
       ${horasDia} horas al día (${escapeHtml(horario)}) · <strong>${totalSesiones} sesiones totales</strong>
-      ${totalPracticas > 0 ? `<br>${totalPracticas} día${totalPracticas > 1 ? 's' : ''} de prácticas (${totalPracticas * horasDia}h)` : ''}
+      ${totalPracticas > 0 ? `<br>${totalPracticas} día${totalPracticas > 1 ? 's' : ''} de prácticas (${totalPracticas * horasPracticas}h a ${horasPracticas}h/día)` : ''}
       ${modulos.length > 0 ? `
         <div class="resumen-modulos">
           ${modulos.map(function (m) {
@@ -448,6 +485,7 @@ function generarBloqueSemana(semana, inicio, fin, horasDia) {
         clases.push('estado-no-lectivo');
       } else if (d.estado.tipo === 'practicas') {
         clases.push('estado-practicas');
+        estiloExtraCelda = ` style="background:${COLOR_PRACTICAS}"`;
       } else if (d.estado.tipo === 'modulo') {
         clases.push('estado-modulo');
         const moduloId = d.estado.horas ? d.estado.horas[h] : null;
@@ -580,7 +618,6 @@ function abrirMenuHora(fechaStr, hora, celda) {
   html += `<button type="button" class="menu-opcion${activoSinClase}" data-tipo="libre">Sin clase</button>`;
 
   if (modulos.length > 0) {
-    html += `<div class="menu-separador">Módulos</div>`;
     modulos.forEach(function (m) {
       const activo = (moduloActual === m.id) ? ' activo' : '';
       html += `<button type="button" class="menu-opcion${activo}" data-tipo="modulo" data-modulo-id="${m.id}">
@@ -631,13 +668,14 @@ function aplicarEstadoDia(fechaStr, tipo, moduloId, horasDia) {
   const finStr = document.getElementById('fechaFin').value;
   const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
   const horario = document.getElementById('horario').value.trim();
+  const horasPracticasActual = parseInt(document.getElementById('horasPracticas').value, 10) || 8;
 
   if (!nombre || !inicioStr || !finStr || !horario || !horasDiaActual) return;
 
   const inicio = new Date(inicioStr + 'T00:00:00');
   const fin = new Date(finStr + 'T00:00:00');
 
-  generarCronograma(nombre, inicio, fin, horasDiaActual, horario);
+  generarCronograma(nombre, inicio, fin, horasDiaActual, horario, horasPracticasActual);
 }
 
 function aplicarEstadoHora(fechaStr, hora, tipo, moduloId) {
@@ -665,13 +703,14 @@ function aplicarEstadoHora(fechaStr, hora, tipo, moduloId) {
   const finStr = document.getElementById('fechaFin').value;
   const horasDiaActual = parseInt(document.getElementById('horasDia').value, 10);
   const horario = document.getElementById('horario').value.trim();
+  const horasPracticasActual = parseInt(document.getElementById('horasPracticas').value, 10) || 8;
 
   if (!nombre || !inicioStr || !finStr || !horario || !horasDiaActual) return;
 
   const inicio = new Date(inicioStr + 'T00:00:00');
   const fin = new Date(finStr + 'T00:00:00');
 
-  generarCronograma(nombre, inicio, fin, horasDiaActual, horario);
+  generarCronograma(nombre, inicio, fin, horasDiaActual, horario, horasPracticasActual);
 }
 
 // ---------- Estado de días ----------
@@ -685,8 +724,6 @@ function obtenerModuloEnHora(fechaStr, hora) {
   if (!estado.horas) return null;
   return estado.horas[hora] || null;
 }
-
-
 
 // ---------- Utilidades de fecha ----------
 function aFormatoISO(fecha) {
@@ -734,8 +771,44 @@ function aplicarDatosPrueba() {
   document.getElementById('fechaFin').value = DATOS_PRUEBA.fin;
   document.getElementById('horasDia').value = DATOS_PRUEBA.horasDia;
   document.getElementById('horario').value = DATOS_PRUEBA.horario;
+  document.getElementById('horasPracticas').value = DATOS_PRUEBA.horasPracticas || 8;
 
   DATOS_PRUEBA.festivos.forEach(function (f) {
     festivos.add(f);
   });
+
+  if (DATOS_PRUEBA.modulos) {
+    DATOS_PRUEBA.modulos.forEach(function (nombreModulo) {
+      const color = PALETA_MODULOS[contadorModulos % PALETA_MODULOS.length];
+      contadorModulos++;
+      modulos.push({
+        id: 'mod-' + contadorModulos,
+        nombre: nombreModulo,
+        color: color
+      });
+    });
+    renderizarModulos();
+  }
+
+  if (DATOS_PRUEBA.dias) {
+    Object.keys(DATOS_PRUEBA.dias).forEach(function (fechaStr) {
+      const dato = DATOS_PRUEBA.dias[fechaStr];
+
+      if (dato.tipo === 'no-lectivo') {
+        estadoDias.set(fechaStr, { tipo: 'no-lectivo' });
+      } else if (dato.tipo === 'practicas') {
+        estadoDias.set(fechaStr, { tipo: 'practicas' });
+      } else if (dato.tipo === 'modulo' && dato.horas) {
+        const horas = {};
+        Object.keys(dato.horas).forEach(function (h) {
+          const idxModulo = dato.horas[h];
+          const modulo = modulos[idxModulo];
+          if (modulo) {
+            horas[h] = modulo.id;
+          }
+        });
+        estadoDias.set(fechaStr, { tipo: 'modulo', horas: horas });
+      }
+    });
+  }
 }
