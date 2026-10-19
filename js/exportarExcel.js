@@ -682,7 +682,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
 
   // Fila de totales de módulos
   filas.push([
-    { v: 'TOTAL', s: estiloCeldaTotalLabel },
+    { v: 'TOTAL HORAS', s: estiloCeldaTotalLabel },
     { v: totalHorasModulos, s: estiloCeldaTotalHoras },
     { v: '', s: estiloCeldaTotalVacia }
   ]);
@@ -692,8 +692,8 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   filas.push([{ v: 'Horas en prácticas', s: estiloTitulo }]);
   filas.push([
     { v: 'Prácticas en empresa', s: estiloCabTabla },
-    { v: 'Días', s: estiloCabTabla },
-    { v: 'Horas / día', s: estiloCabTabla }
+    { v: 'Horas / día', s: estiloCabTabla },
+    { v: 'Días', s: estiloCabTabla }
   ]);
 
   const estiloNombrePracticas = Object.assign({}, estiloCeldaModuloNombre, {
@@ -703,13 +703,13 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   const filaPracticasIndex = filas.length;
   filas.push([
     { v: 'Prácticas en empresa', s: estiloNombrePracticas },
-    { v: totalPracticas, s: estiloCeldaHoras },
-    { v: horasPracticas, s: estiloCeldaHoras }
+    { v: horasPracticas, s: estiloCeldaHoras },
+    { v: totalPracticas, s: estiloCeldaHoras }
   ]);
 
   const filaTotalPracticasIndex = filas.length;
   filas.push([
-    { v: 'TOTAL', s: estiloCeldaTotalLabel },
+    { v: 'TOTAL HORAS', s: estiloCeldaTotalLabel },
     { v: '', s: estiloCeldaTotalVacia },
     { v: '', s: estiloCeldaTotalHoras }
   ]);
@@ -729,10 +729,9 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   const filaExcelPracticas = filaPracticasIndex + 1;
   const filaExcelTotalPracticas = filaTotalPracticasIndex + 1;
   const formula = 'B' + filaExcelPracticas + '*C' + filaExcelPracticas;
-  const direccionTotalPracticas = 'C' + filaExcelTotalPracticas;
+  const direccionTotalPracticas = 'B' + filaExcelTotalPracticas;
   hoja[direccionTotalPracticas] = { t: 'n', f: formula, v: totalPracticas * horasPracticas };
   hoja[direccionTotalPracticas].s = estiloCeldaTotalHoras;
-
   // Aplicar estilos celda a celda
   filas.forEach(function (fila, r) {
     fila.forEach(function (celda, c) {
