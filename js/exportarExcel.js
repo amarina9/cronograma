@@ -131,7 +131,7 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       { v: '', s: null }, { v: '', s: null }, { v: '', s: null }, { v: '', s: null }
     ]);
 
-    const semanas = obtenerSemanasDelMes(mFesInfo.anio, mesInfo.mes);
+    const semanas = obtenerSemanasDelMes(mesInfo.anio, mesInfo.mes);
     semanas.forEach(function (semana) {
       const filaNombres = [{ v: '', s: null }];
       const filaNumeros = [{ v: '', s: null }];
@@ -300,7 +300,11 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
   };
 
   const estiloTitulo = { font: { bold: true, sz: 14, color: { rgb: '1e3a8a' } } };
-  const estiloCabCampo = { font: { bold: true }, fill: { fgColor: { rgb: 'eff6ff' } }, border: bordeFino };
+  const estiloCabCampo = {
+    font: { bold: true },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    border: bordeFino
+  };
 
   // Estilos de la tabla de módulos
   const estiloCabTabla = {
@@ -329,6 +333,26 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
   const estiloAvisoProfesor = {
     font: { italic: true, color: { rgb: '9ca3af' }, sz: 9 },
     alignment: { horizontal: 'left', vertical: 'center' },
+    border: bordeFino
+  };
+
+  // Estilos de la fila de totales
+  const estiloCeldaTotalLabel = {
+    font: { bold: true, color: { rgb: '1e3a8a' } },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    alignment: { horizontal: 'right', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaTotalHoras = {
+    font: { bold: true, color: { rgb: '1e3a8a' } },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaTotalVacia = {
+    fill: { fgColor: { rgb: 'eff6ff' } },
     border: bordeFino
   };
 
@@ -367,7 +391,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
       fill: { fgColor: { rgb: rgbDeHex(m.color) } }
     });
 
-    // La primera fila de módulos lleva el aviso; las demás, celda vacía
     let celdaProfesor;
     if (index === 0) {
       celdaProfesor = { v: 'POR FAVOR RELLENAR LOS PROFESORES AQUÍ', s: estiloAvisoProfesor };
@@ -390,35 +413,18 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
       { v: '', s: estiloCeldaProfesorVacia }
     ]);
   }
+
   // Fila de totales
   const totalHorasModulos = modulos.reduce(function (acc, m) {
     return acc + (horasPorModulo.get(m.id) || 0);
   }, 0);
-
-  const estiloCeldaTotalLabel = {
-    font: { bold: true, color: { rgb: '1e3a8a' } },
-    fill: { fgColor: { rgb: 'eff6ff' } },
-    alignment: { horizontal: 'right', vertical: 'center' },
-    border: bordeFino
-  };
-
-  const estiloCeldaTotalHoras = {
-    font: { bold: true, color: { rgb: '1e3a8a' } },
-    fill: { fgColor: { rgb: 'eff6ff' } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-    border: bordeFino
-  };
-
-  const estiloCeldaTotalVacia = {
-    fill: { fgColor: { rgb: 'eff6ff' } },
-    border: bordeFino
-  };
 
   filas.push([
     { v: 'TOTAL', s: estiloCeldaTotalLabel },
     { v: totalHorasModulos, s: estiloCeldaTotalHoras },
     { v: '', s: estiloCeldaTotalVacia }
   ]);
+
   // Construcción de la hoja
   const hoja = XLSX.utils.aoa_to_sheet(
     filas.map(function (fila) {
