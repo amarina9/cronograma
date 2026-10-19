@@ -460,7 +460,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   let totalLectivos = 0;
   let totalNoLectivos = 0;
   let totalPracticas = 0;
-  let totalSesiones = 0;
+  let totalHorasSinAsignar = 0;
   const horasPorModulo = new Map();
 
   dias.forEach(function (d) {
@@ -470,22 +470,40 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     const estado = obtenerEstadoDia(fechaStr);
     if (d.esFestivo || estado.tipo === 'no-lectivo') { totalNoLectivos++; return; }
     totalLectivos++;
-    if (estado.tipo === 'practicas') { totalPracticas++; totalSesiones += horasPracticas; return; }
+    if (estado.tipo === 'practicas') { totalPracticas++; return; }
     if (estado.tipo === 'modulo') {
-      let horasEsteDia = 0;
       for (let h = 1; h <= horasDia; h++) {
         const modId = estado.horas ? estado.horas[h] : null;
         if (modId) {
           horasPorModulo.set(modId, (horasPorModulo.get(modId) || 0) + 1);
-          horasEsteDia++;
+        } else {
+          totalHorasSinAsignar++;
         }
       }
-      totalSesiones += horasEsteDia;
       return;
     }
-    totalSesiones += horasDia;
+    // Día lectivo sin nada asignado
+    totalHorasSinAsignar += horasDia;
   });
 
+  const totalHorasModulos = modulos.reduce(function (acc, m) {
+    return acc + (horasPorModulo.get(m.id) || 0);
+  }, 0);
+
+  const totalHorasPracticas = totalPracticas * horasPracticas;
+  const totalHorasCurso = totalHorasModulos + totalHorasPracticas + totalHorasSinAsignar;
+
+  // Construir texto de desglose para la fila del total
+  let textoDesglose = '';
+  const partes = [];
+  partes.push(`${totalHorasModulos} h de módulos`);
+  partes.push(`${totalHorasPracticas} h de prácticas`);
+  if (totalHorasSinAsignar > 0) {
+    partes.push(`${totalHorasSinAsignar} h sin asignar`);
+  }
+  textoDesglose = partes.join(' + ');
+
+  // Estilos
   const bordeFino = {
     top: { style: 'thin', color: { rgb: 'd1d5db' } },
     bottom: { style: 'thin', color: { rgb: 'd1d5db' } },
@@ -548,8 +566,47 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     border: bordeFino
   };
 
+  // Estilos del bloque destacado de horas totales
+  const estiloTotalCursoLabel = {
+    font: { bold: true, sz: 16, color: { rgb: 'ffffff' } },
+    fill: { fgColor: { rgb: '1e3a8a' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: {
+      top: { style: 'medium', color: { rgb: '1e3a8a' } },
+      bottom: { style: 'medium', color: { rgb: '1e3a8a' } },
+      left: { style: 'medium', color: { rgb: '1e3a8a' } },
+      right: { style: 'thin', color: { rgb: '1e3a8a' } }
+    }
+  };
+
+  const estiloTotalCursoValor = {
+    font: { bold: true, sz: 16, color: { rgb: 'ffffff' } },
+    fill: { fgColor: { rgb: '1e3a8a' } },
+    alignment: { horizontal: 'right', vertical: 'center' },
+    border: {
+      top: { style: 'medium', color: { rgb: '1e3a8a' } },
+      bottom: { style: 'medium', color: { rgb: '1e3a8a' } },
+      left: { style: 'thin', color: { rgb: '1e3a8a' } },
+      right: { style: 'medium', color: { rgb: '1e3a8a' } }
+    }
+  };
+
+  const estiloTotalCursoDesglose = {
+    font: { italic: true, sz: 10, color: { rgb: '1e3a8a' } },
+    fill: { fgColor: { rgb: 'eff6ff' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: '1e3a8a' } },
+      bottom: { style: 'medium', color: { rgb: '1e3a8a' } },
+      left: { style: 'medium', color: { rgb: '1e3a8a' } },
+      right: { style: 'medium', color: { rgb: '1e3a8a' } }
+    }
+  };
+
+  // Construcción de filas
   const filas = [];
 
+  // --- Bloque 1: datos del curso ---
   filas.push([{ v: 'Resumen del curso', s: estiloTitulo }]);
   filas.push([]);
   filas.push([{ v: 'Nombre', s: estiloCabCampo }, { v: nombre }]);
@@ -558,16 +615,35 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   filas.push([{ v: 'Horas al día', s: estiloCabCampo }, { v: horasDia }]);
   filas.push([{ v: 'Horario', s: estiloCabCampo }, { v: horario }]);
   filas.push([]);
+
+  // --- Bloque 2: HORAS TOTALES DEL CURSO (destacado) ---
+  const filaTotalCursoIndex = filas.length;
+  filas.push([
+    { v: 'HORAS TOTALES DEL CURSO', s: estiloTotalCursoLabel },
+    { v: totalHorasCurso + ' h', s: estiloTotalCursoValor }
+  ]);
+  filas.push([
+    { v: textoDesglose, s: estiloTotalCursoDesglose },
+    { v: '', s: Object.assign({}, estiloTotalCursoDesglose, { alignment: { horizontal: 'right', vertical: 'center' } }) }
+  ]);
+  // Fusionar la fila de desglose en las dos columnas
+  const filaDesgloseIndex = filas.length - 1;
+  filas[filaDesgloseIndex] = [
+    { v: textoDesglose, s: estiloTotalCursoDesglose }
+  ];
+
+  filas.push([]);
+
+  // --- Bloque 3: Totales ---
   filas.push([{ v: 'Totales', s: estiloTitulo }]);
   filas.push([{ v: 'Días naturales', s: estiloCabCampo }, { v: totalDias }]);
   filas.push([{ v: 'Días lectivos', s: estiloCabCampo }, { v: totalLectivos }]);
   filas.push([{ v: 'Días no lectivos', s: estiloCabCampo }, { v: totalNoLectivos }]);
   filas.push([{ v: 'Festivos', s: estiloCabCampo }, { v: totalFestivos }]);
   filas.push([{ v: 'Días de prácticas', s: estiloCabCampo }, { v: totalPracticas }]);
-  filas.push([{ v: 'Sesiones totales', s: estiloCabCampo }, { v: totalSesiones }]);
   filas.push([]);
 
-  // Tabla de horas por módulo
+  // --- Bloque 4: Horas por módulo ---
   filas.push([{ v: 'Horas por módulo', s: estiloTitulo }]);
   filas.push([
     { v: 'Módulo', s: estiloCabTabla },
@@ -605,17 +681,13 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   }
 
   // Fila de totales de módulos
-  const totalHorasModulos = modulos.reduce(function (acc, m) {
-    return acc + (horasPorModulo.get(m.id) || 0);
-  }, 0);
-
   filas.push([
     { v: 'TOTAL', s: estiloCeldaTotalLabel },
     { v: totalHorasModulos, s: estiloCeldaTotalHoras },
     { v: '', s: estiloCeldaTotalVacia }
   ]);
 
-  // ---------- Tabla de prácticas en empresa ----------
+  // --- Bloque 5: Horas en prácticas ---
   filas.push([]);
   filas.push([{ v: 'Horas en prácticas', s: estiloTitulo }]);
   filas.push([
@@ -675,7 +747,15 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     });
   });
 
-  hoja['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 42 }];
+  // Fusiones: unir las dos columnas del bloque destacado
+  hoja['!merges'] = [
+    // Fila del título "HORAS TOTALES DEL CURSO": columnas A y B
+    { s: { r: filaTotalCursoIndex, c: 0 }, e: { r: filaTotalCursoIndex, c: 1 } },
+    // Fila del desglose: columnas A y B
+    { s: { r: filaDesgloseIndex, c: 0 }, e: { r: filaDesgloseIndex, c: 1 } }
+  ];
+
+  hoja['!cols'] = [{ wch: 32 }, { wch: 14 }, { wch: 42 }];
   return hoja;
 }
 
