@@ -547,6 +547,13 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     border: bordeFino
   };
 
+    const estiloPlaceholderSeleccion = {
+    font: { italic: true, color: { rgb: '9ca3af' }, sz: 10 },
+    fill: { fgColor: { rgb: 'fef9c3' } }, // amarillo suave
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: bordeFino
+  };
+
   const estiloCeldaTotalLabel = {
     font: { bold: true, color: { rgb: '1e3a8a' } },
     fill: { fgColor: { rgb: 'eff6ff' } },
@@ -614,8 +621,14 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   filas.push([{ v: 'Fecha fin', s: estiloCabCampo }, { v: formatearFecha(fin) }]);
   filas.push([{ v: 'Horas al día', s: estiloCabCampo }, { v: horasDia }]);
   filas.push([{ v: 'Horario', s: estiloCabCampo }, { v: horario }]);
-  filas.push([{ v: 'Fecha prueba de selección', s: estiloCabCampo }, { v: '' }]);
-  filas.push([{ v: 'Hora prueba de selección', s: estiloCabCampo }, { v: '' }]);
+  filas.push([
+    { v: 'Fecha prueba de selección', s: estiloCabCampo },
+    { v: '(POR FAVOR, RELLENAR A MANO)', s: estiloPlaceholderSeleccion }
+  ]);
+  filas.push([
+    { v: 'Hora prueba de selección', s: estiloCabCampo },
+    { v: '(POR FAVOR, RELLENAR A MANO)', s: estiloPlaceholderSeleccion }
+  ]);
   filas.push([]);
 
   // --- Bloque 2: HORAS TOTALES DEL CURSO (destacado) ---
