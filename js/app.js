@@ -31,15 +31,21 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
 const NOMBRES_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const PALETA_MODULOS = [
-  '#bfdbfe',
-  '#fbcfe8',
-  '#fde68a',
-  '#c7d2fe',
-  '#a7f3d0',
-  '#fed7aa',
-  '#ddd6fe',
-  '#fecaca'
+  '#86efac', // verde menta
+  '#fda4af', // rosa coral
+  '#fde047', // amarillo limón
+  '#c4b5fd', // lavanda
+  '#7dd3fc', // azul cielo
+  '#fca5a5', // rojo suave
+  '#a5f3fc', // cian
+  '#d9f99d', // verde lima
+  '#f0abfc', // fucsia suave
+  '#fcd34d', // ámbar
+  '#5eead4', // turquesa
+  '#fbcfe8'  // rosa palo
 ];
+
+const COLOR_PRACTICAS = '#fdba74'; // naranja medio
 
 let contadorModulos = 0;
 
@@ -514,8 +520,7 @@ function abrirMenuDia(fechaStr, cabecera) {
 
   const opcionesBase = [
     { tipo: 'lectivo', etiqueta: 'Lectivo (por defecto)' },
-    { tipo: 'no-lectivo', etiqueta: 'No lectivo' },
-    { tipo: 'practicas', etiqueta: 'Prácticas en empresa' }
+    { tipo: 'no-lectivo', etiqueta: 'No lectivo' }
   ];
 
   opcionesBase.forEach(function (op) {
@@ -523,8 +528,14 @@ function abrirMenuDia(fechaStr, cabecera) {
     html += `<button type="button" class="menu-opcion${activo}" data-tipo="${op.tipo}">${op.etiqueta}</button>`;
   });
 
+  // Prácticas con cuadradito de color
+  const activoPracticas = estadoActual.tipo === 'practicas' ? ' activo' : '';
+  html += `<button type="button" class="menu-opcion${activoPracticas}" data-tipo="practicas">
+    <span class="menu-color" style="background:${COLOR_PRACTICAS}"></span>Prácticas en empresa
+  </button>`;
+
+  // Módulos directamente, sin separador
   if (modulos.length > 0) {
-    html += `<div class="menu-separador">Módulos (todo el día)</div>`;
     modulos.forEach(function (m) {
       let activo = '';
       if (estadoActual.tipo === 'modulo' && estadoActual.horas) {
