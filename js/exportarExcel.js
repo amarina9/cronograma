@@ -291,9 +291,49 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     totalSesiones += horasDia;
   });
 
-  const filas = [];
+  // Estilos generales
+  const bordeFino = {
+    top: { style: 'thin', color: { rgb: 'd1d5db' } },
+    bottom: { style: 'thin', color: { rgb: 'd1d5db' } },
+    left: { style: 'thin', color: { rgb: 'd1d5db' } },
+    right: { style: 'thin', color: { rgb: 'd1d5db' } }
+  };
+
   const estiloTitulo = { font: { bold: true, sz: 14, color: { rgb: '1e3a8a' } } };
-  const estiloCabCampo = { font: { bold: true }, fill: { fgColor: { rgb: 'eff6ff' } } };
+  const estiloCabCampo = { font: { bold: true }, fill: { fgColor: { rgb: 'eff6ff' } }, border: bordeFino };
+
+  // Estilos de la tabla de módulos
+  const estiloCabTabla = {
+    font: { bold: true, color: { rgb: 'ffffff' } },
+    fill: { fgColor: { rgb: '2563eb' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaModuloNombre = {
+    font: { bold: true },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaHoras = {
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloCeldaProfesorVacia = {
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: bordeFino
+  };
+
+  const estiloAvisoProfesor = {
+    font: { italic: true, color: { rgb: '9ca3af' }, sz: 9 },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: bordeFino
+  };
+
+  // Construcción de filas
+  const filas = [];
 
   filas.push([{ v: 'Resumen del curso', s: estiloTitulo }]);
   filas.push([]);
@@ -311,20 +351,47 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
   filas.push([{ v: 'Días de prácticas', s: estiloCabCampo }, { v: totalPracticas }]);
   filas.push([{ v: 'Sesiones totales', s: estiloCabCampo }, { v: totalSesiones }]);
   filas.push([]);
-  filas.push([{ v: 'Horas por módulo', s: estiloTitulo }]);
 
-  modulos.forEach(function (m) {
+  // Tabla de horas por módulo
+  filas.push([{ v: 'Horas por módulo', s: estiloTitulo }]);
+  filas.push([
+    { v: 'Módulo', s: estiloCabTabla },
+    { v: 'Horas', s: estiloCabTabla },
+    { v: 'Profesor', s: estiloCabTabla }
+  ]);
+
+  modulos.forEach(function (m, index) {
     const horas = horasPorModulo.get(m.id) || 0;
-    const estiloModulo = {
-      fill: { fgColor: { rgb: rgbDeHex(m.color) } },
-      font: { bold: true }
-    };
+
+    const estiloNombreModulo = Object.assign({}, estiloCeldaModuloNombre, {
+      fill: { fgColor: { rgb: rgbDeHex(m.color) } }
+    });
+
+    // La primera fila de módulos lleva el aviso; las demás, celda vacía
+    let celdaProfesor;
+    if (index === 0) {
+      celdaProfesor = { v: 'POR FAVOR RELLENAR LOS PROFESORES AQUÍ', s: estiloAvisoProfesor };
+    } else {
+      celdaProfesor = { v: '', s: estiloCeldaProfesorVacia };
+    }
+
     filas.push([
-      { v: m.nombre, s: estiloModulo },
-      { v: horas + ' h' }
+      { v: m.nombre, s: estiloNombreModulo },
+      { v: horas, s: estiloCeldaHoras },
+      celdaProfesor
     ]);
   });
 
+  // Si no hay módulos, mostramos una fila vacía para que se vea la tabla
+  if (modulos.length === 0) {
+    filas.push([
+      { v: '(Sin módulos definidos)', s: { font: { italic: true, color: { rgb: '9ca3af' } }, border: bordeFino } },
+      { v: '', s: estiloCeldaHoras },
+      { v: '', s: estiloCeldaProfesorVacia }
+    ]);
+  }
+
+  // Construcción de la hoja
   const hoja = XLSX.utils.aoa_to_sheet(
     filas.map(function (fila) {
       return fila.map(function (celda) {
@@ -335,6 +402,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     })
   );
 
+  // Aplicar estilos celda a celda
   filas.forEach(function (fila, r) {
     fila.forEach(function (celda, c) {
       if (celda === null || celda === undefined) return;
@@ -342,13 +410,13 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
       if (!celda.s) return;
       const direccion = XLSX.utils.encode_cell({ r: r, c: c });
       if (!hoja[direccion]) {
-        hoja[direccion] = { v: celda.v || '', t: 's' };
+        hoja[direccion] = { v: celda.v || '', t: typeof celda.v === 'number' ? 'n' : 's' };
       }
       hoja[direccion].s = celda.s;
     });
   });
 
-  hoja['!cols'] = [{ wch: 22 }, { wch: 30 }];
+  hoja['!cols'] = [{ wch: 32 }, { wch: 10 }, { wch: 42 }];
   return hoja;
 }
 
