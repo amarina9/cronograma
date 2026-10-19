@@ -614,6 +614,8 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
   filas.push([{ v: 'Fecha fin', s: estiloCabCampo }, { v: formatearFecha(fin) }]);
   filas.push([{ v: 'Horas al día', s: estiloCabCampo }, { v: horasDia }]);
   filas.push([{ v: 'Horario', s: estiloCabCampo }, { v: horario }]);
+  filas.push([{ v: 'Fecha prueba de selección', s: estiloCabCampo }, { v: '' }]);
+  filas.push([{ v: 'Hora prueba de selección', s: estiloCabCampo }, { v: '' }]);
   filas.push([]);
 
   // --- Bloque 2: HORAS TOTALES DEL CURSO (destacado) ---
@@ -753,6 +755,14 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPract
     // Fila del desglose: columnas A y B
     { s: { r: filaDesgloseIndex, c: 0 }, e: { r: filaDesgloseIndex, c: 1 } }
   ];
+
+    // Forzar el estilo del total de prácticas (se sobrescribe en el bucle de estilos)
+  hoja[direccionTotalPracticas] = {
+    t: 'n',
+    f: 'B' + filaExcelPracticas + '*C' + filaExcelPracticas,
+    v: totalPracticas * horasPracticas,
+    s: estiloCeldaTotalHoras
+  };
 
   hoja['!cols'] = [{ wch: 32 }, { wch: 14 }, { wch: 42 }];
   return hoja;
