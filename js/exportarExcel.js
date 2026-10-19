@@ -54,12 +54,18 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   };
 
   const bordeGruesoSeparador = { style: 'medium', color: { rgb: '6b7280' } };
+  const bordeGruesoExtremo = { style: 'medium', color: { rgb: '1e3a8a' } };
 
   const estiloTituloMes = {
     font: { bold: true, sz: 14, color: { rgb: '1e3a8a' } },
     alignment: { horizontal: 'center', vertical: 'center' },
     fill: { fgColor: { rgb: 'eff6ff' } },
-    border: bordeFino
+    border: {
+      top: bordeGruesoExtremo,
+      bottom: bordeFino,
+      left: bordeGruesoExtremo,
+      right: bordeGruesoExtremo
+    }
   };
 
   const estiloCabeceraDia = {
@@ -122,37 +128,65 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     fill: { fgColor: { rgb: 'd1fae5' } }
   });
 
+  const estiloTituloLeyenda = {
+    font: { bold: true, sz: 11, color: { rgb: '1e3a8a' } },
+    alignment: { horizontal: 'left', vertical: 'center' }
+  };
+
+  const estiloLeyendaTexto = {
+    font: { sz: 10, color: { rgb: '111827' } },
+    alignment: { horizontal: 'left', vertical: 'center' }
+  };
+
+  const estiloLeyendaCuadro = {
+    border: bordeFino
+  };
+
   const meses = obtenerMesesEntre(inicio, fin);
 
   let filaActual = 0;
   let maxColumnas = 1;
 
+  // Reservamos espacio para la leyenda a la derecha: 2 columnas (cuadro + texto)
+  const COLUMNAS_LEYENDA = 2;
+  const MARGEN_LEYENDA = 1; // columna vacía entre el mes y la leyenda
+
   meses.forEach(function (mesInfo, indexMes) {
     const ultimoDiaDelMes = new Date(mesInfo.anio, mesInfo.mes + 1, 0).getDate();
-    const columnasMes = 1 + ultimoDiaDelMes; // col A + un día por columna
-    if (columnasMes > maxColumnas) maxColumnas = columnasMes;
+    const columnasMes = 1 + ultimoDiaDelMes;
+    const columnasTotalesMes = columnasMes + MARGEN_LEYENDA + COLUMNAS_LEYENDA;
+
+    if (columnasTotalesMes > maxColumnas) maxColumnas = columnasTotalesMes;
 
     if (indexMes > 0) {
       filas.push([]);
       filaActual++;
     }
 
-    // ---------- Fila 1: título del mes (fusionada de col 0 a la última) ----------
+    const filaInicioMes = filaActual;
+
+    // ---------- Fila 1: título del mes (fusionada) + título leyenda ----------
     const filaTitulo = [];
     for (let c = 0; c < columnasMes; c++) {
       filaTitulo.push({ v: c === 0 ? capitalizar(MESES[mesInfo.mes]) + ' ' + mesInfo.anio : '', s: null });
     }
+    // Columna de margen vacía
+    for (let m = 0; m < MARGEN_LEYENDA; m++) {
+      filaTitulo.push({ v: '', s: null });
+    }
+    // Inicio de la leyenda: título
+    filaTitulo.push({ v: 'Leyenda', s: estiloTituloLeyenda });
+    filaTitulo.push({ v: '', s: null });
+
     filas.push(filaTitulo);
     fusiones.push({
       s: { r: filaActual, c: 0 },
       e: { r: filaActual, c: columnasMes - 1 }
     });
-    // Estilo del título (aplicado a la celda origen de la fusión)
     filaTitulo[0].s = estiloTituloMes;
     filaActual++;
 
-    // ---------- Fila 2: nombres de días ----------
-    // ---------- Fila 3: números de días ----------
+    // ---------- Fila 2: nombres de días + leyenda (módulos, prácticas, etc.) ----------
     const filaNombres = [{ v: '', s: null }];
     const filaNumeros = [{ v: '', s: null }];
     const datosPorColumna = [];
@@ -172,7 +206,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       else if (esFinde) estiloNombre = estiloCabeceraFinde;
       else if (estado.tipo === 'no-lectivo') estiloNombre = estiloCabeceraFinde;
 
-      // Borde grueso a la derecha si es domingo
       if (diaSemana === 0) {
         estiloNombre = Object.assign({}, estiloNombre, {
           border: Object.assign({}, estiloNombre.border, {
@@ -201,6 +234,71 @@ function construirHojaCronograma(inicio, fin, horasDia) {
         estado: estado,
         esDomingo: diaSemana === 0
       });
+    }
+
+    // Añadir la primera fila de leyenda: módulos (uno por fila) a la derecha
+    // Preparamos el contenido de la leyenda como array de { cuadro, texto } por fila
+    const entradasLeyenda = [];
+
+    modulos.forEach(function (m) {
+      entradasLeyenda.push({
+        color: m.color,
+        texto: m.nombre
+      });
+    });
+
+    entradasLeyenda.push({
+      color: '#d1fae5',
+      texto: 'Prácticas en empresa'
+    });
+
+    entradasLeyenda.push({
+      color: '#f3f4f6',
+      texto: 'No lectivo'
+    });
+
+    entradasLeyenda.push({
+      color: '#f3f4f6',
+      texto: 'Festivos'
+    });
+
+    entradasLeyenda.push({
+      color: '#fafafa',
+      texto: 'Fuera de rango'
+    });
+
+    // La primera fila de leyenda va en la fila de "nombres de días"
+    // Las siguientes filas irán en las filas de horas
+    // Por eso guardamos el array para consumirlo fila a fila
+
+    let indiceLeyenda = 0;
+
+    // Fila de nombres de días: añadir margen y primera entrada de leyenda
+    for (let m = 0; m < MARGEN_LEYENDA; m++) {
+      filaNombres.push({ v: '', s: null });
+    }
+    if (indiceLeyenda < entradasLeyenda.length) {
+      const e = entradasLeyenda[indiceLeyenda];
+      filaNombres.push({ v: '', s: Object.assign({}, estiloLeyendaCuadro, { fill: { fgColor: { rgb: rgbDeHex(e.color) } } }) });
+      filaNombres.push({ v: e.texto, s: estiloLeyendaTexto });
+      indiceLeyenda++;
+    } else {
+      filaNombres.push({ v: '', s: null });
+      filaNombres.push({ v: '', s: null });
+    }
+
+    // Fila de números de días: siguiente entrada de leyenda
+    for (let m = 0; m < MARGEN_LEYENDA; m++) {
+      filaNumeros.push({ v: '', s: null });
+    }
+    if (indiceLeyenda < entradasLeyenda.length) {
+      const e = entradasLeyenda[indiceLeyenda];
+      filaNumeros.push({ v: '', s: Object.assign({}, estiloLeyendaCuadro, { fill: { fgColor: { rgb: rgbDeHex(e.color) } } }) });
+      filaNumeros.push({ v: e.texto, s: estiloLeyendaTexto });
+      indiceLeyenda++;
+    } else {
+      filaNumeros.push({ v: '', s: null });
+      filaNumeros.push({ v: '', s: null });
     }
 
     filas.push(filaNombres);
@@ -241,8 +339,86 @@ function construirHojaCronograma(inicio, fin, horasDia) {
         fila.push({ v: '', s: estilo });
       });
 
+      // Columna de margen
+      for (let m = 0; m < MARGEN_LEYENDA; m++) {
+        fila.push({ v: '', s: null });
+      }
+
+      // Leyenda para esta fila
+      if (indiceLeyenda < entradasLeyenda.length) {
+        const e = entradasLeyenda[indiceLeyenda];
+        fila.push({ v: '', s: Object.assign({}, estiloLeyendaCuadro, { fill: { fgColor: { rgb: rgbDeHex(e.color) } } }) });
+        fila.push({ v: e.texto, s: estiloLeyendaTexto });
+        indiceLeyenda++;
+      } else {
+        fila.push({ v: '', s: null });
+        fila.push({ v: '', s: null });
+      }
+
       filas.push(fila);
       filaActual++;
+    }
+
+    // ---------- Aplicar bordes gruesos extremos al bloque del mes ----------
+    const filaFinMes = filaActual - 1;
+
+    // Recorremos todas las filas del mes y las celdas, aplicando bordes gruesos
+    // donde toque: izquierda en col 0, derecha en col (columnasMes - 1),
+    // arriba en filaInicioMes, abajo en filaFinMes.
+    for (let r = filaInicioMes; r <= filaFinMes; r++) {
+      if (!filas[r]) continue;
+
+      // Borde izquierdo en la columna 0
+      const celdaIzq = filas[r][0];
+      if (celdaIzq && typeof celdaIzq === 'object') {
+        const base = celdaIzq.s || { border: bordeFino, alignment: { horizontal: 'center', vertical: 'center' } };
+        celdaIzq.s = Object.assign({}, base, {
+          border: Object.assign({}, base.border || bordeFino, {
+            left: bordeGruesoExtremo
+          })
+        });
+      }
+
+      // Borde derecho en la última columna del mes
+      const celdaDer = filas[r][columnasMes - 1];
+      if (celdaDer && typeof celdaDer === 'object') {
+        const base = celdaDer.s || { border: bordeFino, alignment: { horizontal: 'center', vertical: 'center' } };
+        celdaDer.s = Object.assign({}, base, {
+          border: Object.assign({}, base.border || bordeFino, {
+            right: bordeGruesoExtremo
+          })
+        });
+      }
+
+      // Borde superior en la primera fila (título ya lo tiene, pero lo forzamos en todas las celdas del título)
+      if (r === filaInicioMes) {
+        for (let c = 0; c < columnasMes; c++) {
+          const celda = filas[r][c];
+          if (celda && typeof celda === 'object') {
+            const base = celda.s || {};
+            celda.s = Object.assign({}, base, {
+              border: Object.assign({}, base.border || bordeFino, {
+                top: bordeGruesoExtremo
+              })
+            });
+          }
+        }
+      }
+
+      // Borde inferior en la última fila
+      if (r === filaFinMes) {
+        for (let c = 0; c < columnasMes; c++) {
+          const celda = filas[r][c];
+          if (celda && typeof celda === 'object') {
+            const base = celda.s || {};
+            celda.s = Object.assign({}, base, {
+              border: Object.assign({}, base.border || bordeFino, {
+                bottom: bordeGruesoExtremo
+              })
+            });
+          }
+        }
+      }
     }
   });
 
@@ -275,12 +451,20 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   }
 
   const anchos = [{ wch: 6 }];
-  for (let i = 1; i < maxColumnas; i++) anchos.push({ wch: 6 });
+  for (let i = 1; i < maxColumnas; i++) {
+    // Ajustar ancho: las columnas de leyenda (texto) más anchas
+    // Calculamos si esta columna cae en la zona de leyenda del último mes
+    // Como aproximación: las últimas 2 columnas de maxColumnas son de leyenda
+    if (i >= maxColumnas - 2) {
+      anchos.push({ wch: 30 });
+    } else {
+      anchos.push({ wch: 6 });
+    }
+  }
   hoja['!cols'] = anchos;
 
   return hoja;
 }
-
 function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
   const dias = [];
   let cursor = new Date(inicio);
