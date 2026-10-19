@@ -10,6 +10,7 @@ function exportarAExcel() {
   const finStr = document.getElementById('fechaFin').value;
   const horasDia = parseInt(document.getElementById('horasDia').value, 10);
   const horario = document.getElementById('horario').value.trim();
+  const horasPracticas = parseInt(document.getElementById('horasPracticas').value, 10) || 8;
 
   if (!nombre || !inicioStr || !finStr || !horasDia) {
     alert('Genera primero el cronograma.');
@@ -29,7 +30,7 @@ function exportarAExcel() {
   const hojaCronograma = construirHojaCronograma(inicio, fin, horasDia);
   XLSX.utils.book_append_sheet(libro, hojaCronograma, 'Cronograma');
 
-  const hojaResumen = construirHojaResumen(nombre, inicio, fin, horasDia, horario);
+  const hojaResumen = construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPracticas);
   XLSX.utils.book_append_sheet(libro, hojaResumen, 'Resumen');
 
   const nombreLimpio = nombre
@@ -125,7 +126,7 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   });
 
   const estiloCeldaPracticas = Object.assign({}, estiloCeldaBase, {
-    fill: { fgColor: { rgb: 'fdba74' } }
+    fill: { fgColor: { rgb: rgbDeHex(COLOR_PRACTICAS) } }
   });
 
   const estiloTituloLeyenda = {
@@ -133,7 +134,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     alignment: { horizontal: 'left', vertical: 'center' }
   };
 
-  // Entrada de leyenda: una sola celda con fondo de color y texto en negrita
   function estiloEntradaLeyenda(colorHex) {
     return {
       font: { bold: true, color: { rgb: '111827' }, sz: 10 },
@@ -143,12 +143,11 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     };
   }
 
-  // Datos de la leyenda (una sola vez)
   const entradasLeyenda = [];
   modulos.forEach(function (m) {
     entradasLeyenda.push({ color: m.color, texto: m.nombre });
   });
-  entradasLeyenda.push({ color: '#fdba74', texto: 'Prácticas en empresa' });
+  entradasLeyenda.push({ color: COLOR_PRACTICAS, texto: 'Prácticas en empresa' });
   entradasLeyenda.push({ color: '#f3f4f6', texto: 'No lectivo' });
   entradasLeyenda.push({ color: '#f3f4f6', texto: 'Festivos' });
   entradasLeyenda.push({ color: '#fafafa', texto: 'Fuera de rango' });
@@ -158,14 +157,13 @@ function construirHojaCronograma(inicio, fin, horasDia) {
   let filaActual = 0;
   let maxColumnas = 1;
 
-  const MARGEN_LEYENDA = 1; // columna vacía entre el mes y la leyenda
-  const COLUMNAS_LEYENDA = 1; // una sola columna para la leyenda
+  const MARGEN_LEYENDA = 1;
+  const COLUMNAS_LEYENDA = 1;
 
   meses.forEach(function (mesInfo, indexMes) {
     const ultimoDiaDelMes = new Date(mesInfo.anio, mesInfo.mes + 1, 0).getDate();
     const columnasMes = 1 + ultimoDiaDelMes;
 
-    // La leyenda solo se añade al primer mes
     const incluyeLeyenda = (indexMes === 0);
     const columnasTotalesMes = incluyeLeyenda
       ? columnasMes + MARGEN_LEYENDA + COLUMNAS_LEYENDA
@@ -180,7 +178,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
 
     const filaInicioMes = filaActual;
 
-    // ---------- Fila 1: título del mes (+ título leyenda si aplica) ----------
     const filaTitulo = [];
     for (let c = 0; c < columnasMes; c++) {
       filaTitulo.push({ v: c === 0 ? capitalizar(MESES[mesInfo.mes]) + ' ' + mesInfo.anio : '', s: null });
@@ -201,8 +198,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     filaTitulo[0].s = estiloTituloMes;
     filaActual++;
 
-    // ---------- Fila 2: nombres de días ----------
-    // ---------- Fila 3: números de días ----------
     const filaNombres = [{ v: '', s: null }];
     const filaNumeros = [{ v: '', s: null }];
     const datosPorColumna = [];
@@ -252,7 +247,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       });
     }
 
-    // Leyenda: la primera entrada va en la fila de nombres
     let indiceLeyenda = 0;
 
     if (incluyeLeyenda) {
@@ -268,7 +262,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       }
     }
 
-    // La segunda entrada va en la fila de números
     if (incluyeLeyenda) {
       for (let m = 0; m < MARGEN_LEYENDA; m++) {
         filaNumeros.push({ v: '', s: null });
@@ -287,7 +280,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     filas.push(filaNumeros);
     filaActual++;
 
-    // ---------- Filas de horas ----------
     for (let h = 1; h <= horasDia; h++) {
       const fila = [{ v: 'H' + h, s: estiloHoraLabel }];
 
@@ -320,7 +312,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
         fila.push({ v: '', s: estilo });
       });
 
-      // Leyenda para esta fila (solo primer mes)
       if (incluyeLeyenda) {
         for (let m = 0; m < MARGEN_LEYENDA; m++) {
           fila.push({ v: '', s: null });
@@ -338,12 +329,9 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       filaActual++;
     }
 
-    // Si todavía quedan entradas de leyenda (más que filas de horas + cabeceras),
-    // las añadimos como filas extra al final del bloque del primer mes
     if (incluyeLeyenda) {
       while (indiceLeyenda < entradasLeyenda.length) {
         const fila = [];
-        // Rellenar hasta la columna de margen con vacíos
         for (let c = 0; c < columnasMes + MARGEN_LEYENDA; c++) {
           fila.push({ v: '', s: null });
         }
@@ -355,7 +343,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
       }
     }
 
-    // ---------- Bordes gruesos extremos ----------
     const filaFinMes = filaActual - 1;
 
     for (let r = filaInicioMes; r <= filaFinMes; r++) {
@@ -395,8 +382,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
         }
       }
 
-      // Para el borde inferior: solo aplicamos a las columnas del mes,
-      // no a las que son de leyenda extra
       if (r === filaFinMes) {
         for (let c = 0; c < columnasMes; c++) {
           const celda = filas[r][c];
@@ -413,7 +398,6 @@ function construirHojaCronograma(inicio, fin, horasDia) {
     }
   });
 
-  // ---------- Construir la hoja ----------
   const hoja = XLSX.utils.aoa_to_sheet(
     filas.map(function (fila) {
       return fila.map(function (celda) {
@@ -453,7 +437,8 @@ function construirHojaCronograma(inicio, fin, horasDia) {
 
   return hoja;
 }
-function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
+
+function construirHojaResumen(nombre, inicio, fin, horasDia, horario, horasPracticas) {
   const dias = [];
   let cursor = new Date(inicio);
   while (cursor <= fin) {
@@ -485,7 +470,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     const estado = obtenerEstadoDia(fechaStr);
     if (d.esFestivo || estado.tipo === 'no-lectivo') { totalNoLectivos++; return; }
     totalLectivos++;
-    if (estado.tipo === 'practicas') { totalPracticas++; totalSesiones += horasDia; return; }
+    if (estado.tipo === 'practicas') { totalPracticas++; totalSesiones += horasPracticas; return; }
     if (estado.tipo === 'modulo') {
       let horasEsteDia = 0;
       for (let h = 1; h <= horasDia; h++) {
@@ -501,7 +486,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     totalSesiones += horasDia;
   });
 
-  // Estilos generales
   const bordeFino = {
     top: { style: 'thin', color: { rgb: 'd1d5db' } },
     bottom: { style: 'thin', color: { rgb: 'd1d5db' } },
@@ -516,7 +500,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     border: bordeFino
   };
 
-  // Estilos de la tabla de módulos
   const estiloCabTabla = {
     font: { bold: true, color: { rgb: 'ffffff' } },
     fill: { fgColor: { rgb: '2563eb' } },
@@ -546,7 +529,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     border: bordeFino
   };
 
-  // Estilos de la fila de totales
   const estiloCeldaTotalLabel = {
     font: { bold: true, color: { rgb: '1e3a8a' } },
     fill: { fgColor: { rgb: 'eff6ff' } },
@@ -566,7 +548,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     border: bordeFino
   };
 
-  // Construcción de filas
   const filas = [];
 
   filas.push([{ v: 'Resumen del curso', s: estiloTitulo }]);
@@ -615,7 +596,6 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     ]);
   });
 
-  // Si no hay módulos, mostramos una fila vacía para que se vea la tabla
   if (modulos.length === 0) {
     filas.push([
       { v: '(Sin módulos definidos)', s: { font: { italic: true, color: { rgb: '9ca3af' } }, border: bordeFino } },
@@ -624,7 +604,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     ]);
   }
 
-  // Fila de totales
+  // Fila de totales de módulos
   const totalHorasModulos = modulos.reduce(function (acc, m) {
     return acc + (horasPorModulo.get(m.id) || 0);
   }, 0);
@@ -633,6 +613,33 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     { v: 'TOTAL', s: estiloCeldaTotalLabel },
     { v: totalHorasModulos, s: estiloCeldaTotalHoras },
     { v: '', s: estiloCeldaTotalVacia }
+  ]);
+
+  // ---------- Tabla de prácticas en empresa ----------
+  filas.push([]);
+  filas.push([{ v: 'Horas en prácticas', s: estiloTitulo }]);
+  filas.push([
+    { v: 'Prácticas en empresa', s: estiloCabTabla },
+    { v: 'Días', s: estiloCabTabla },
+    { v: 'Horas / día', s: estiloCabTabla }
+  ]);
+
+  const estiloNombrePracticas = Object.assign({}, estiloCeldaModuloNombre, {
+    fill: { fgColor: { rgb: rgbDeHex(COLOR_PRACTICAS) } }
+  });
+
+  const filaPracticasIndex = filas.length;
+  filas.push([
+    { v: 'Prácticas en empresa', s: estiloNombrePracticas },
+    { v: totalPracticas, s: estiloCeldaHoras },
+    { v: horasPracticas, s: estiloCeldaHoras }
+  ]);
+
+  const filaTotalPracticasIndex = filas.length;
+  filas.push([
+    { v: 'TOTAL', s: estiloCeldaTotalLabel },
+    { v: '', s: estiloCeldaTotalVacia },
+    { v: '', s: estiloCeldaTotalHoras }
   ]);
 
   // Construcción de la hoja
@@ -645,6 +652,14 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
       });
     })
   );
+
+  // Fórmula de Excel para el TOTAL de prácticas
+  const filaExcelPracticas = filaPracticasIndex + 1;
+  const filaExcelTotalPracticas = filaTotalPracticasIndex + 1;
+  const formula = 'B' + filaExcelPracticas + '*C' + filaExcelPracticas;
+  const direccionTotalPracticas = 'C' + filaExcelTotalPracticas;
+  hoja[direccionTotalPracticas] = { t: 'n', f: formula, v: totalPracticas * horasPracticas };
+  hoja[direccionTotalPracticas].s = estiloCeldaTotalHoras;
 
   // Aplicar estilos celda a celda
   filas.forEach(function (fila, r) {
@@ -660,7 +675,7 @@ function construirHojaResumen(nombre, inicio, fin, horasDia, horario) {
     });
   });
 
-  hoja['!cols'] = [{ wch: 32 }, { wch: 10 }, { wch: 42 }];
+  hoja['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 42 }];
   return hoja;
 }
 
