@@ -1,5 +1,5 @@
 // ---------- Datos de prueba (¡QUITAR EN PRODUCCIÓN!) ----------
-const MODO_PRUEBA = true;
+const MODO_PRUEBA = false;
 
 const DATOS_PRUEBA = {
   nombre: 'Curso de prueba',
